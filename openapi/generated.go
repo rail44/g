@@ -13,22 +13,22 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// PostUserRegisterJSONBody defines parameters for PostUserRegister.
-type PostUserRegisterJSONBody struct {
+// PostAccountRegisterJSONBody defines parameters for PostAccountRegister.
+type PostAccountRegisterJSONBody struct {
 	Name string `json:"name"`
 }
 
-// PostUserRegisterJSONRequestBody defines body for PostUserRegister for application/json ContentType.
-type PostUserRegisterJSONRequestBody PostUserRegisterJSONBody
+// PostAccountRegisterJSONRequestBody defines body for PostAccountRegister for application/json ContentType.
+type PostAccountRegisterJSONRequestBody PostAccountRegisterJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
-	// (POST /user/register)
-	PostUserRegister(w http.ResponseWriter, r *http.Request)
+	// (POST /account/register)
+	PostAccountRegister(w http.ResponseWriter, r *http.Request)
 
-	// (GET /user/{userId}/balance)
-	GetUserUserIdBalance(w http.ResponseWriter, r *http.Request, userId int)
+	// (GET /account/{accountId}/balance)
+	GetAccountAccountIdBalance(w http.ResponseWriter, r *http.Request, accountId int)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -40,12 +40,12 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
-// PostUserRegister operation middleware
-func (siw *ServerInterfaceWrapper) PostUserRegister(w http.ResponseWriter, r *http.Request) {
+// PostAccountRegister operation middleware
+func (siw *ServerInterfaceWrapper) PostAccountRegister(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PostUserRegister(w, r)
+		siw.Handler.PostAccountRegister(w, r)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -55,23 +55,23 @@ func (siw *ServerInterfaceWrapper) PostUserRegister(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetUserUserIdBalance operation middleware
-func (siw *ServerInterfaceWrapper) GetUserUserIdBalance(w http.ResponseWriter, r *http.Request) {
+// GetAccountAccountIdBalance operation middleware
+func (siw *ServerInterfaceWrapper) GetAccountAccountIdBalance(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
 
-	// ------------- Path parameter "userId" -------------
-	var userId int
+	// ------------- Path parameter "accountId" -------------
+	var accountId int
 
-	err = runtime.BindStyledParameterWithLocation("simple", false, "userId", runtime.ParamLocationPath, chi.URLParam(r, "userId"), &userId)
+	err = runtime.BindStyledParameterWithLocation("simple", false, "accountId", runtime.ParamLocationPath, chi.URLParam(r, "accountId"), &accountId)
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "accountId", Err: err})
 		return
 	}
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetUserUserIdBalance(w, r, userId)
+		siw.Handler.GetAccountAccountIdBalance(w, r, accountId)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -195,47 +195,47 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/user/register", wrapper.PostUserRegister)
+		r.Post(options.BaseURL+"/account/register", wrapper.PostAccountRegister)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/user/{userId}/balance", wrapper.GetUserUserIdBalance)
+		r.Get(options.BaseURL+"/account/{accountId}/balance", wrapper.GetAccountAccountIdBalance)
 	})
 
 	return r
 }
 
-type PostUserRegisterRequestObject struct {
-	Body *PostUserRegisterJSONRequestBody
+type PostAccountRegisterRequestObject struct {
+	Body *PostAccountRegisterJSONRequestBody
 }
 
-type PostUserRegisterResponseObject interface {
-	VisitPostUserRegisterResponse(w http.ResponseWriter) error
+type PostAccountRegisterResponseObject interface {
+	VisitPostAccountRegisterResponse(w http.ResponseWriter) error
 }
 
-type PostUserRegister200JSONResponse struct {
-	UserId *int `json:"userId,omitempty"`
+type PostAccountRegister200JSONResponse struct {
+	AccountId *int `json:"accountId,omitempty"`
 }
 
-func (response PostUserRegister200JSONResponse) VisitPostUserRegisterResponse(w http.ResponseWriter) error {
+func (response PostAccountRegister200JSONResponse) VisitPostAccountRegisterResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetUserUserIdBalanceRequestObject struct {
-	UserId int `json:"userId"`
+type GetAccountAccountIdBalanceRequestObject struct {
+	AccountId int `json:"accountId"`
 }
 
-type GetUserUserIdBalanceResponseObject interface {
-	VisitGetUserUserIdBalanceResponse(w http.ResponseWriter) error
+type GetAccountAccountIdBalanceResponseObject interface {
+	VisitGetAccountAccountIdBalanceResponse(w http.ResponseWriter) error
 }
 
-type GetUserUserIdBalance200JSONResponse struct {
+type GetAccountAccountIdBalance200JSONResponse struct {
 	Balance *string `json:"balance,omitempty"`
 }
 
-func (response GetUserUserIdBalance200JSONResponse) VisitGetUserUserIdBalanceResponse(w http.ResponseWriter) error {
+func (response GetAccountAccountIdBalance200JSONResponse) VisitGetAccountAccountIdBalanceResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
@@ -245,11 +245,11 @@ func (response GetUserUserIdBalance200JSONResponse) VisitGetUserUserIdBalanceRes
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
-	// (POST /user/register)
-	PostUserRegister(ctx context.Context, request PostUserRegisterRequestObject) (PostUserRegisterResponseObject, error)
+	// (POST /account/register)
+	PostAccountRegister(ctx context.Context, request PostAccountRegisterRequestObject) (PostAccountRegisterResponseObject, error)
 
-	// (GET /user/{userId}/balance)
-	GetUserUserIdBalance(ctx context.Context, request GetUserUserIdBalanceRequestObject) (GetUserUserIdBalanceResponseObject, error)
+	// (GET /account/{accountId}/balance)
+	GetAccountAccountIdBalance(ctx context.Context, request GetAccountAccountIdBalanceRequestObject) (GetAccountAccountIdBalanceResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, args interface{}) (interface{}, error)
@@ -282,11 +282,11 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
-// PostUserRegister operation middleware
-func (sh *strictHandler) PostUserRegister(w http.ResponseWriter, r *http.Request) {
-	var request PostUserRegisterRequestObject
+// PostAccountRegister operation middleware
+func (sh *strictHandler) PostAccountRegister(w http.ResponseWriter, r *http.Request) {
+	var request PostAccountRegisterRequestObject
 
-	var body PostUserRegisterJSONRequestBody
+	var body PostAccountRegisterJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -294,18 +294,18 @@ func (sh *strictHandler) PostUserRegister(w http.ResponseWriter, r *http.Request
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PostUserRegister(ctx, request.(PostUserRegisterRequestObject))
+		return sh.ssi.PostAccountRegister(ctx, request.(PostAccountRegisterRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PostUserRegister")
+		handler = middleware(handler, "PostAccountRegister")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PostUserRegisterResponseObject); ok {
-		if err := validResponse.VisitPostUserRegisterResponse(w); err != nil {
+	} else if validResponse, ok := response.(PostAccountRegisterResponseObject); ok {
+		if err := validResponse.VisitPostAccountRegisterResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -313,25 +313,25 @@ func (sh *strictHandler) PostUserRegister(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// GetUserUserIdBalance operation middleware
-func (sh *strictHandler) GetUserUserIdBalance(w http.ResponseWriter, r *http.Request, userId int) {
-	var request GetUserUserIdBalanceRequestObject
+// GetAccountAccountIdBalance operation middleware
+func (sh *strictHandler) GetAccountAccountIdBalance(w http.ResponseWriter, r *http.Request, accountId int) {
+	var request GetAccountAccountIdBalanceRequestObject
 
-	request.UserId = userId
+	request.AccountId = accountId
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetUserUserIdBalance(ctx, request.(GetUserUserIdBalanceRequestObject))
+		return sh.ssi.GetAccountAccountIdBalance(ctx, request.(GetAccountAccountIdBalanceRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetUserUserIdBalance")
+		handler = middleware(handler, "GetAccountAccountIdBalance")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetUserUserIdBalanceResponseObject); ok {
-		if err := validResponse.VisitGetUserUserIdBalanceResponse(w); err != nil {
+	} else if validResponse, ok := response.(GetAccountAccountIdBalanceResponseObject); ok {
+		if err := validResponse.VisitGetAccountAccountIdBalanceResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

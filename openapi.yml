@@ -3,7 +3,7 @@ info:
   version: 0.1.0
   title: g
 paths:
-  /user/register:
+  /account/register:
     post:
       requestBody:
         content:
@@ -23,15 +23,15 @@ paths:
               schema:
                 type: object
                 properties:
-                  userId:
+                  accountId:
                     type: integer
                 required:
                   - name
-  /user/{userId}/balance:
+  /account/{accountId}/balance:
     get:
       parameters:
         - in: path
-          name: userId
+          name: accountId
           schema:
             type: integer
           required: true
