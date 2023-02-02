@@ -14,31 +14,28 @@ import (
 )
 
 func NewController(db *sql.DB) http.Handler {
-  controller := Controller { db: db }
+  model := Model { db: db }
+  controller := Controller { db: db, model: &model }
 	return Handler(NewStrictHandler(controller, nil))
 }
 
 type Controller struct {
 	db *sql.DB
+	model *Model
 }
 
 func (controller Controller) Balance(ctx context.Context, req BalanceRequestObject) (BalanceResponseObject, error) {
-	queries := sqlc.New(controller.db)
+  balance, err := controller.model.getBalance(ctx, req.Id)
 
-	balanceDecimal, err := queries.GetBalance(ctx, int64(req.Id))
-	if err == sql.ErrNoRows {
+  if err == sql.ErrNoRows {
 		var res Balance404Response
-		return res, nil
-	}
+    return res, nil
+  }
 
-	if err != nil {
-		return nil, fmt.Errorf("query GetBalance: %w", err)
-	}
-
-	balance, err := strconv.Atoi(balanceDecimal)
 	if err != nil {
 		return nil, fmt.Errorf("parse balance as decimal: %w", err)
 	}
+
 	res := Balance200JSONResponse{
 		Balance: &balance,
 	}
@@ -206,15 +203,14 @@ func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) 
 	}
 	amount := strconv.Itoa(req.Body.Amount)
 
-	accountId := int64(req.Id)
-	balanceDecimal, err := queries.GetBalance(ctx, accountId)
-	if err != nil {
-		return nil, fmt.Errorf("query GetBalance: %w", err)
+	balance, err := controller.model.getBalance(ctx, req.Id)
+	if err == sql.ErrNoRows {
+    var res Spend404Response;
+		return res, nil
 	}
 
-	balance, err := strconv.Atoi(balanceDecimal)
 	if err != nil {
-		return nil, fmt.Errorf("parse balance as decimal: %w", err)
+		return nil, fmt.Errorf("getBalance: %w", err)
 	}
 
 	if req.Body.Amount > balance {
@@ -228,6 +224,7 @@ func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) 
 		return nil, fmt.Errorf("query InsertSpend: %w", err)
 	}
 
+	accountId := int64(req.Id)
 	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
 		Account: accountId,
 		Spend:   sql.NullInt64{Int64: spendId, Valid: true},
@@ -268,15 +265,14 @@ func (controller Controller) Transfer(ctx context.Context, req TransferRequestOb
 	amount := strconv.Itoa(req.Body.Amount)
 
 	accountId := int64(req.Id)
-	balanceDecimal, err := queries.GetBalance(ctx, accountId)
+	balance, err := controller.model.getBalance(ctx, req.Id)
 	if err == sql.ErrNoRows {
-		var res Transfer404Response
+    var res Transfer404Response
 		return res, nil
 	}
 
-	balance, err := strconv.Atoi(balanceDecimal)
 	if err != nil {
-		return nil, fmt.Errorf("parse balance as decimal: %w", err)
+		return nil, fmt.Errorf("getBalance: %w", err)
 	}
 
 	if req.Body.Amount > balance {
