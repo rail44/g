@@ -160,7 +160,7 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 
 	mintId, err := queries.InsertMint(ctx, amount)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
+		return nil, fmt.Errorf("query InsertMint: %w", err)
 	}
 
 	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
@@ -168,7 +168,7 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 		Mint:    sql.NullInt64{Int64: mintId, Valid: true},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query InsertTransaction: %w", err)
+		return nil, fmt.Errorf("query InsertTransaction: %w", err)
 	}
 
 	err = queries.IncrementBalance(ctx, sqlc.IncrementBalanceParams{
@@ -176,7 +176,7 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 		Amount:  amount,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query IncrementBalance: %w", err)
+		return nil, fmt.Errorf("query IncrementBalance: %w", err)
 	}
 
 	txIdInt := int(txId)
@@ -203,15 +203,25 @@ func (server Server) PostAccountsIdSpend(ctx context.Context, req openapi.PostAc
 	amount := strconv.Itoa(req.Body.Amount)
 
 	accountId := int64(req.Id)
-	_, err = queries.GetAccount(ctx, accountId)
-	if err == sql.ErrNoRows {
-		res := openapi.PostAccountsIdSpend404Response{}
+	balanceDecimal, err := queries.GetBalance(ctx, accountId)
+	if err != nil {
+		return nil, fmt.Errorf("query GetBalance: %w", err)
+	}
+
+	balance, err := strconv.Atoi(balanceDecimal)
+	if err != nil {
+		return nil, fmt.Errorf("parse balance as decimal: %w", err)
+	}
+
+	if req.Body.Amount > balance {
+		msg := fmt.Sprintf("tried to spend %d, but balance was only %d", req.Body.Amount, balance)
+		res := openapi.PostAccountsIdSpend400TextResponse(msg)
 		return res, nil
 	}
 
 	spendId, err := queries.InsertSpend(ctx, amount)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query InsertSpend: %w", err)
+		return nil, fmt.Errorf("query InsertSpend: %w", err)
 	}
 
 	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
@@ -219,7 +229,7 @@ func (server Server) PostAccountsIdSpend(ctx context.Context, req openapi.PostAc
 		Spend:   sql.NullInt64{Int64: spendId, Valid: true},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query InsertTransaction: %w", err)
+		return nil, fmt.Errorf("query InsertTransaction: %w", err)
 	}
 
 	err = queries.DecrementBalance(ctx, sqlc.DecrementBalanceParams{
@@ -227,7 +237,7 @@ func (server Server) PostAccountsIdSpend(ctx context.Context, req openapi.PostAc
 		Amount:  amount,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query IncrementBalance: %w", err)
+		return nil, fmt.Errorf("query DecrementBalance: %w", err)
 	}
 
 	txIdInt := int(txId)
