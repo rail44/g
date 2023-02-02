@@ -1,8 +1,8 @@
 package main
 
 import (
-	"log"
 	"fmt"
+	"log"
 	"net/http"
 
 	"database/sql"
@@ -14,14 +14,14 @@ import (
 func main() {
 	db, err := sql.Open("postgres", "user=postgres dbname=g password=password host=localhost sslmode=disable")
 	if err != nil {
-                log.Fatal(fmt.Sprintf("open postgres: %w", err))
+		log.Fatal(fmt.Sprintf("open postgres: %w", err))
 	}
 
-        r := chi.NewRouter()
+	r := chi.NewRouter()
 	accountsCotroller := accounts.NewController(db)
 	r.Mount("/accounts", accountsCotroller)
 
 	log.Print("start listening")
 	err = http.ListenAndServe(":3000", r)
-        log.Fatal(fmt.Sprintf("listening: %w", err))
+	log.Fatal(fmt.Sprintf("listening: %w", err))
 }

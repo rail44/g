@@ -25,7 +25,7 @@ type Controller struct {
 }
 
 func (controller Controller) Balance(ctx context.Context, req BalanceRequestObject) (BalanceResponseObject, error) {
-  balance, err := controller.model.getBalance(ctx, req.Id)
+  balance, err := controller.model.GetBalance(ctx, req.Id)
 
   if err == sql.ErrNoRows {
 		var res Balance404Response
@@ -106,35 +106,21 @@ func (controller Controller) Transactions(ctx context.Context, req TransactionsR
 }
 
 func (controller Controller) Register(ctx context.Context, req RegisterRequestObject) (RegisterResponseObject, error) {
-	tx, err := controller.db.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-	queries := sqlc.New(tx)
-
 	name := req.Body.Name
 	if len(name) == 0 {
 		res := Register400TextResponse("name is not presented")
 		return res, nil
 	}
 
-	accountId, err := queries.InsertAccount(ctx, sql.NullString{String: name, Valid: true})
+	id, err := controller.model.Register(ctx, name)
 	if err != nil {
-		return nil, fmt.Errorf("query InsertAccount: %w", err)
+		return nil, fmt.Errorf("Register: %w", err)
 	}
-
-	err = queries.InsertBalance(ctx, accountId)
-	if err != nil {
-		return nil, fmt.Errorf("query InsertBalance: %w", err)
-	}
-
-	accountIdInt := int(accountId)
 	res := Register200JSONResponse{
-		AccountId: &accountIdInt,
+		AccountId: &id,
 	}
 
-	return res, tx.Commit()
+	return res, nil
 }
 
 func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (MintResponseObject, error) {
@@ -203,7 +189,7 @@ func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) 
 	}
 	amount := strconv.Itoa(req.Body.Amount)
 
-	balance, err := controller.model.getBalance(ctx, req.Id)
+	balance, err := controller.model.GetBalance(ctx, req.Id)
 	if err == sql.ErrNoRows {
     var res Spend404Response;
 		return res, nil
@@ -265,7 +251,7 @@ func (controller Controller) Transfer(ctx context.Context, req TransferRequestOb
 	amount := strconv.Itoa(req.Body.Amount)
 
 	accountId := int64(req.Id)
-	balance, err := controller.model.getBalance(ctx, req.Id)
+	balance, err := controller.model.GetBalance(ctx, req.Id)
 	if err == sql.ErrNoRows {
     var res Transfer404Response
 		return res, nil
