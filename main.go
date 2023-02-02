@@ -95,6 +95,10 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 
 	queries := sqlc.New(tx)
 
+	if req.Body.Amount <= 0 {
+		res := openapi.PostAccountsIdMint400TextResponse("amount should be positive value")
+		return res, nil
+	}
 	amount := strconv.Itoa(req.Body.Amount)
 
 	accountId := int64(req.Id)
@@ -104,20 +108,17 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 		return res, nil
 	}
 
-	mintId, err := queries.InsertMint(ctx, sqlc.InsertMintParams{
-		Account: accountId,
-		Amount:  amount,
-	})
+	mintId, err := queries.InsertMint(ctx, amount)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
 	}
 
 	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
-		Mint:     sql.NullInt64{Int64: mintId, Valid: true},
-		Transfer: sql.NullInt64{},
+		Account: accountId,
+		Mint:    sql.NullInt64{Int64: mintId, Valid: true},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
+		return nil, fmt.Errorf("Failed to query InsertTransaction: %w", err)
 	}
 
 	err = queries.IncrementBalance(ctx, sqlc.IncrementBalanceParams{
@@ -125,11 +126,62 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 		Amount:  amount,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
+		return nil, fmt.Errorf("Failed to query IncrementBalance: %w", err)
 	}
 
 	txIdInt := int(txId)
 	res := openapi.PostAccountsIdMint200JSONResponse{
+		TransactionId: &txIdInt,
+	}
+
+	return res, tx.Commit()
+}
+
+func (server Server) PostAccountsIdSpend(ctx context.Context, req openapi.PostAccountsIdSpendRequestObject) (openapi.PostAccountsIdSpendResponseObject, error) {
+	tx, err := server.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	queries := sqlc.New(tx)
+
+	if req.Body.Amount <= 0 {
+		res := openapi.PostAccountsIdSpend400TextResponse("amount should be positive value")
+		return res, nil
+	}
+	amount := strconv.Itoa(req.Body.Amount)
+
+	accountId := int64(req.Id)
+	_, err = queries.GetAccount(ctx, accountId)
+	if err == sql.ErrNoRows {
+		res := openapi.PostAccountsIdSpend404Response{}
+		return res, nil
+	}
+
+	spendId, err := queries.InsertSpend(ctx, amount)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query InsertSpend: %w", err)
+	}
+
+	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
+		Account: accountId,
+		Spend:   sql.NullInt64{Int64: spendId, Valid: true},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query InsertTransaction: %w", err)
+	}
+
+	err = queries.DecrementBalance(ctx, sqlc.DecrementBalanceParams{
+		Account: accountId,
+		Amount:  amount,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query IncrementBalance: %w", err)
+	}
+
+	txIdInt := int(txId)
+	res := openapi.PostAccountsIdSpend200JSONResponse{
 		TransactionId: &txIdInt,
 	}
 
@@ -145,10 +197,14 @@ func (server Server) PostAccountsIdTransfer(ctx context.Context, req openapi.Pos
 
 	queries := sqlc.New(tx)
 
+	if req.Body.Amount <= 0 {
+		res := openapi.PostAccountsIdTransfer400TextResponse("amount should be positive value")
+		return res, nil
+	}
 	amount := strconv.Itoa(req.Body.Amount)
 
-	fromAccountId := int64(req.Id)
-	balanceDecimal, err := queries.GetBalance(ctx, fromAccountId)
+	accountId := int64(req.Id)
+	balanceDecimal, err := queries.GetBalance(ctx, accountId)
 	if err == sql.ErrNoRows {
 		res := openapi.PostAccountsIdTransfer404Response{}
 		return res, nil
@@ -165,33 +221,32 @@ func (server Server) PostAccountsIdTransfer(ctx context.Context, req openapi.Pos
 		return res, nil
 	}
 
-	toAccountId := int64(req.Body.To)
-	_, err = queries.GetAccount(ctx, toAccountId)
+	receipientId := int64(req.Body.To)
+	_, err = queries.GetAccount(ctx, receipientId)
 	if err == sql.ErrNoRows {
-		msg := fmt.Sprintf("receipient was not found by id %d", toAccountId)
+		msg := fmt.Sprintf("receipient was not found by id %d", receipientId)
 		res := openapi.PostAccountsIdTransfer400TextResponse(msg)
 		return res, nil
 	}
 
 	transferId, err := queries.InsertTransfer(ctx, sqlc.InsertTransferParams{
-		FromAccount: fromAccountId,
-		ToAccount:   toAccountId,
-		Amount:      amount,
+		Receipient: receipientId,
+		Amount:     amount,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("query InsertTransfer: %w", err)
 	}
 
 	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
+		Account:  accountId,
 		Transfer: sql.NullInt64{Int64: transferId, Valid: true},
-		Mint:     sql.NullInt64{},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("query InsertTransaction: %w", err)
 	}
 
 	err = queries.DecrementBalance(ctx, sqlc.DecrementBalanceParams{
-		Account: fromAccountId,
+		Account: accountId,
 		Amount:  amount,
 	})
 	if err != nil {
@@ -199,7 +254,7 @@ func (server Server) PostAccountsIdTransfer(ctx context.Context, req openapi.Pos
 	}
 
 	err = queries.IncrementBalance(ctx, sqlc.IncrementBalanceParams{
-		Account: toAccountId,
+		Account: receipientId,
 		Amount:  amount,
 	})
 	if err != nil {

@@ -82,6 +82,39 @@ paths:
               schema:
                 type: string
         404: {}
+  /accounts/{id}/spend:
+    post:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+              required:
+                - amount
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactionId:
+                    type: integer
+        400:
+          content:
+            text/plain:
+              schema:
+                type: string
+        404: {}
   /accounts/{id}/transfer:
     post:
       parameters:

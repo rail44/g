@@ -20,23 +20,30 @@ INSERT INTO balances (
 
 -- name: InsertMint :one
 INSERT INTO mints (
-  account, amount
+  amount
 ) VALUES (
-  $1, $2
+  $1
+) RETURNING id;
+
+-- name: InsertSpend :one
+INSERT INTO spends (
+  amount
+) VALUES (
+  $1
 ) RETURNING id;
 
 -- name: InsertTransfer :one
 INSERT INTO transfers (
-  from_account, to_account, amount
+  receipient, amount
 ) VALUES (
-  $1, $2, $3
+  $1, $2
 ) RETURNING id;
 
 -- name: InsertTransaction :one
 INSERT INTO transactions (
-  mint, transfer
+  account, mint, spend, transfer
 ) VALUES (
-  $1, $2
+  $1, $2, $3, $4
 ) RETURNING id;
 
 -- name: IncrementBalance :exec

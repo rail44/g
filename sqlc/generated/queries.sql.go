@@ -95,19 +95,29 @@ func (q *Queries) InsertBalance(ctx context.Context, account int64) error {
 
 const insertMint = `-- name: InsertMint :one
 INSERT INTO mints (
-  account, amount
+  amount
 ) VALUES (
-  $1, $2
+  $1
 ) RETURNING id
 `
 
-type InsertMintParams struct {
-	Account int64
-	Amount  string
+func (q *Queries) InsertMint(ctx context.Context, amount string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertMint, amount)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
-func (q *Queries) InsertMint(ctx context.Context, arg InsertMintParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertMint, arg.Account, arg.Amount)
+const insertSpend = `-- name: InsertSpend :one
+INSERT INTO spends (
+  amount
+) VALUES (
+  $1
+) RETURNING id
+`
+
+func (q *Queries) InsertSpend(ctx context.Context, amount string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertSpend, amount)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -115,19 +125,26 @@ func (q *Queries) InsertMint(ctx context.Context, arg InsertMintParams) (int64, 
 
 const insertTransaction = `-- name: InsertTransaction :one
 INSERT INTO transactions (
-  mint, transfer
+  account, mint, spend, transfer
 ) VALUES (
-  $1, $2
+  $1, $2, $3, $4
 ) RETURNING id
 `
 
 type InsertTransactionParams struct {
+	Account  int64
 	Mint     sql.NullInt64
+	Spend    sql.NullInt64
 	Transfer sql.NullInt64
 }
 
 func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertTransaction, arg.Mint, arg.Transfer)
+	row := q.db.QueryRowContext(ctx, insertTransaction,
+		arg.Account,
+		arg.Mint,
+		arg.Spend,
+		arg.Transfer,
+	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -135,20 +152,19 @@ func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionPa
 
 const insertTransfer = `-- name: InsertTransfer :one
 INSERT INTO transfers (
-  from_account, to_account, amount
+  receipient, amount
 ) VALUES (
-  $1, $2, $3
+  $1, $2
 ) RETURNING id
 `
 
 type InsertTransferParams struct {
-	FromAccount int64
-	ToAccount   int64
-	Amount      string
+	Receipient int64
+	Amount     string
 }
 
 func (q *Queries) InsertTransfer(ctx context.Context, arg InsertTransferParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertTransfer, arg.FromAccount, arg.ToAccount, arg.Amount)
+	row := q.db.QueryRowContext(ctx, insertTransfer, arg.Receipient, arg.Amount)
 	var id int64
 	err := row.Scan(&id)
 	return id, err

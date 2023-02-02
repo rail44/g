@@ -22,21 +22,26 @@ type Balance struct {
 }
 
 type Mint struct {
-	ID      int64
-	Account int64
-	Amount  string
+	ID     int64
+	Amount string
+}
+
+type Spend struct {
+	ID     int64
+	Amount string
 }
 
 type Transaction struct {
 	ID         int64
+	Account    int64
 	InsertedAt time.Time
 	Mint       sql.NullInt64
+	Spend      sql.NullInt64
 	Transfer   sql.NullInt64
 }
 
 type Transfer struct {
-	ID          int64
-	Amount      string
-	FromAccount int64
-	ToAccount   int64
+	ID         int64
+	Amount     string
+	Receipient int64
 }

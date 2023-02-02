@@ -23,6 +23,11 @@ type PostAccountsIdMintJSONBody struct {
 	Amount int `json:"amount"`
 }
 
+// PostAccountsIdSpendJSONBody defines parameters for PostAccountsIdSpend.
+type PostAccountsIdSpendJSONBody struct {
+	Amount int `json:"amount"`
+}
+
 // PostAccountsIdTransferJSONBody defines parameters for PostAccountsIdTransfer.
 type PostAccountsIdTransferJSONBody struct {
 	Amount int `json:"amount"`
@@ -34,6 +39,9 @@ type PostAccountsRegisterJSONRequestBody PostAccountsRegisterJSONBody
 
 // PostAccountsIdMintJSONRequestBody defines body for PostAccountsIdMint for application/json ContentType.
 type PostAccountsIdMintJSONRequestBody PostAccountsIdMintJSONBody
+
+// PostAccountsIdSpendJSONRequestBody defines body for PostAccountsIdSpend for application/json ContentType.
+type PostAccountsIdSpendJSONRequestBody PostAccountsIdSpendJSONBody
 
 // PostAccountsIdTransferJSONRequestBody defines body for PostAccountsIdTransfer for application/json ContentType.
 type PostAccountsIdTransferJSONRequestBody PostAccountsIdTransferJSONBody
@@ -49,6 +57,9 @@ type ServerInterface interface {
 
 	// (POST /accounts/{id}/mint)
 	PostAccountsIdMint(w http.ResponseWriter, r *http.Request, id int)
+
+	// (POST /accounts/{id}/spend)
+	PostAccountsIdSpend(w http.ResponseWriter, r *http.Request, id int)
 
 	// (POST /accounts/{id}/transfer)
 	PostAccountsIdTransfer(w http.ResponseWriter, r *http.Request, id int)
@@ -121,6 +132,32 @@ func (siw *ServerInterfaceWrapper) PostAccountsIdMint(w http.ResponseWriter, r *
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAccountsIdMint(w, r, id)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// PostAccountsIdSpend operation middleware
+func (siw *ServerInterfaceWrapper) PostAccountsIdSpend(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAccountsIdSpend(w, r, id)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -279,6 +316,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/accounts/{id}/mint", wrapper.PostAccountsIdMint)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/accounts/{id}/spend", wrapper.PostAccountsIdSpend)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/accounts/{id}/transfer", wrapper.PostAccountsIdTransfer)
 	})
 
@@ -379,6 +419,44 @@ func (response PostAccountsIdMint404Response) VisitPostAccountsIdMintResponse(w 
 	return nil
 }
 
+type PostAccountsIdSpendRequestObject struct {
+	Id   int `json:"id"`
+	Body *PostAccountsIdSpendJSONRequestBody
+}
+
+type PostAccountsIdSpendResponseObject interface {
+	VisitPostAccountsIdSpendResponse(w http.ResponseWriter) error
+}
+
+type PostAccountsIdSpend200JSONResponse struct {
+	TransactionId *int `json:"transactionId,omitempty"`
+}
+
+func (response PostAccountsIdSpend200JSONResponse) VisitPostAccountsIdSpendResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostAccountsIdSpend400TextResponse string
+
+func (response PostAccountsIdSpend400TextResponse) VisitPostAccountsIdSpendResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(400)
+
+	_, err := w.Write([]byte(response))
+	return err
+}
+
+type PostAccountsIdSpend404Response struct {
+}
+
+func (response PostAccountsIdSpend404Response) VisitPostAccountsIdSpendResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
 type PostAccountsIdTransferRequestObject struct {
 	Id   int `json:"id"`
 	Body *PostAccountsIdTransferJSONRequestBody
@@ -428,6 +506,9 @@ type StrictServerInterface interface {
 
 	// (POST /accounts/{id}/mint)
 	PostAccountsIdMint(ctx context.Context, request PostAccountsIdMintRequestObject) (PostAccountsIdMintResponseObject, error)
+
+	// (POST /accounts/{id}/spend)
+	PostAccountsIdSpend(ctx context.Context, request PostAccountsIdSpendRequestObject) (PostAccountsIdSpendResponseObject, error)
 
 	// (POST /accounts/{id}/transfer)
 	PostAccountsIdTransfer(ctx context.Context, request PostAccountsIdTransferRequestObject) (PostAccountsIdTransferResponseObject, error)
@@ -546,6 +627,39 @@ func (sh *strictHandler) PostAccountsIdMint(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PostAccountsIdMintResponseObject); ok {
 		if err := validResponse.VisitPostAccountsIdMintResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// PostAccountsIdSpend operation middleware
+func (sh *strictHandler) PostAccountsIdSpend(w http.ResponseWriter, r *http.Request, id int) {
+	var request PostAccountsIdSpendRequestObject
+
+	request.Id = id
+
+	var body PostAccountsIdSpendJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAccountsIdSpend(ctx, request.(PostAccountsIdSpendRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAccountsIdSpend")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAccountsIdSpendResponseObject); ok {
+		if err := validResponse.VisitPostAccountsIdSpendResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
