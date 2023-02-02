@@ -14,19 +14,6 @@ import (
 	"github.com/rail44/g/sqlc/generated"
 )
 
-type Secret struct {
-	SupabaseKey string `toml:"supabaseKey"`
-}
-
-type GraphqlTranstport struct {
-	supabaseKey *string
-}
-
-func (trastport *GraphqlTranstport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add("apikey", *trastport.supabaseKey)
-	return http.DefaultTransport.RoundTrip(req)
-}
-
 type Server struct {
 	db *sql.DB
 }
