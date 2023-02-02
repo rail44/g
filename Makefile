@@ -8,7 +8,7 @@ db/launch:
 db/schema:
 	psql -f sqlc/schema.sql postgresql://postgres:$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
 
-generate/openapi: openapi/generated.go
+openapi/generate: accounts/openapi.gen.go
 
-openapi/generated.go: openapi.yml
-	oapi-codegen -package openapi -generate types,chi-server,strict-server openapi.yml > $@
+accounts/openapi.gen.go: accounts/openapi.yml
+	oapi-codegen -package accounts -generate types,chi-server,strict-server $< > $@

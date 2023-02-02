@@ -1,9 +1,10 @@
 openapi: 3.1.0
 info:
   version: 0.1.0
-  title: g
+  title: g/accounts
+basePath: /accounts
 paths:
-  /accounts/{id}/balance:
+  /{id}/balance:
     get:
       operationId: Balance
       parameters:
@@ -18,7 +19,7 @@ paths:
                   balance:
                     type: integer
         404: {}
-  /accounts/{id}/transactions:
+  /{id}/transactions:
     get:
       operationId: Transactions
       parameters:
@@ -34,7 +35,7 @@ paths:
                   - $ref: '#/components/schemas/Spend'
                   - $ref: '#/components/schemas/Transfer'
         404: {}
-  /accounts/register:
+  /:
     post:
       operationId: Register
       requestBody:
@@ -63,7 +64,7 @@ paths:
             text/plain:
               schema:
                 type: string
-  /accounts/{id}/mint:
+  /{id}/mint:
     post:
       operationId: Mint
       parameters:
@@ -93,7 +94,7 @@ paths:
               schema:
                 type: string
         404: {}
-  /accounts/{id}/spend:
+  /{id}/spend:
     post:
       operationId: Spend
       parameters:
@@ -123,7 +124,7 @@ paths:
               schema:
                 type: string
         404: {}
-  /accounts/{id}/transfer:
+  /{id}/transfer:
     post:
       operationId: Transfer
       parameters:
