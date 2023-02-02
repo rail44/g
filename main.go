@@ -18,12 +18,12 @@ type Server struct {
 	db *sql.DB
 }
 
-func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAccountsIdBalanceRequestObject) (openapi.GetAccountsIdBalanceResponseObject, error) {
+func (server Server) Balance(ctx context.Context, req openapi.BalanceRequestObject) (openapi.BalanceResponseObject, error) {
 	queries := sqlc.New(server.db)
 
 	balanceDecimal, err := queries.GetBalance(ctx, int64(req.Id))
 	if err == sql.ErrNoRows {
-		var res openapi.GetAccountsIdBalance404Response
+		var res openapi.Balance404Response
 		return res, nil
 	}
 
@@ -35,18 +35,18 @@ func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAc
 	if err != nil {
 		return nil, fmt.Errorf("parse balance as decimal: %w", err)
 	}
-	res := openapi.GetAccountsIdBalance200JSONResponse{
+	res := openapi.Balance200JSONResponse{
 		Balance: &balance,
 	}
 	return res, nil
 }
 
-func (server Server) GetAccountsIdTransactions(ctx context.Context, req openapi.GetAccountsIdTransactionsRequestObject) (openapi.GetAccountsIdTransactionsResponseObject, error) {
+func (server Server) Transactions(ctx context.Context, req openapi.TransactionsRequestObject) (openapi.TransactionsResponseObject, error) {
 	queries := sqlc.New(server.db)
 
 	_, err := queries.GetAccount(ctx, int64(req.Id))
 	if err == sql.ErrNoRows {
-		var res openapi.GetAccountsIdTransactions404Response
+		var res openapi.Transactions404Response
 		return res, nil
 	}
 
@@ -101,10 +101,10 @@ func (server Server) GetAccountsIdTransactions(ctx context.Context, req openapi.
 		return nil, fmt.Errorf("failed to determine type of transaction")
 	}
 
-	return openapi.GetAccountsIdTransactions200JSONResponse(res), nil
+	return openapi.Transactions200JSONResponse(res), nil
 }
 
-func (server Server) PostAccountsRegister(ctx context.Context, req openapi.PostAccountsRegisterRequestObject) (openapi.PostAccountsRegisterResponseObject, error) {
+func (server Server) Register(ctx context.Context, req openapi.RegisterRequestObject) (openapi.RegisterResponseObject, error) {
 	tx, err := server.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
@@ -114,7 +114,7 @@ func (server Server) PostAccountsRegister(ctx context.Context, req openapi.PostA
 
 	name := req.Body.Name
 	if len(name) == 0 {
-		res := openapi.PostAccountsRegister400TextResponse("name is not presented")
+		res := openapi.Register400TextResponse("name is not presented")
 		return res, nil
 	}
 
@@ -129,14 +129,14 @@ func (server Server) PostAccountsRegister(ctx context.Context, req openapi.PostA
 	}
 
 	accountIdInt := int(accountId)
-	res := openapi.PostAccountsRegister200JSONResponse{
+	res := openapi.Register200JSONResponse{
 		AccountId: &accountIdInt,
 	}
 
 	return res, tx.Commit()
 }
 
-func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAccountsIdMintRequestObject) (openapi.PostAccountsIdMintResponseObject, error) {
+func (server Server) Mint(ctx context.Context, req openapi.MintRequestObject) (openapi.MintResponseObject, error) {
 	tx, err := server.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
@@ -146,7 +146,7 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 	queries := sqlc.New(tx)
 
 	if req.Body.Amount <= 0 {
-		res := openapi.PostAccountsIdMint400TextResponse("amount should be positive value")
+		res := openapi.Mint400TextResponse("amount should be positive value")
 		return res, nil
 	}
 	amount := strconv.Itoa(req.Body.Amount)
@@ -154,7 +154,7 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 	accountId := int64(req.Id)
 	_, err = queries.GetAccount(ctx, accountId)
 	if err == sql.ErrNoRows {
-		var res openapi.PostAccountsIdMint404Response
+		var res openapi.Mint404Response
 		return res, nil
 	}
 
@@ -180,14 +180,14 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 	}
 
 	txIdInt := int(txId)
-	res := openapi.PostAccountsIdMint200JSONResponse{
+	res := openapi.Mint200JSONResponse{
 		TransactionId: &txIdInt,
 	}
 
 	return res, tx.Commit()
 }
 
-func (server Server) PostAccountsIdSpend(ctx context.Context, req openapi.PostAccountsIdSpendRequestObject) (openapi.PostAccountsIdSpendResponseObject, error) {
+func (server Server) Spend(ctx context.Context, req openapi.SpendRequestObject) (openapi.SpendResponseObject, error) {
 	tx, err := server.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
@@ -197,7 +197,7 @@ func (server Server) PostAccountsIdSpend(ctx context.Context, req openapi.PostAc
 	queries := sqlc.New(tx)
 
 	if req.Body.Amount <= 0 {
-		res := openapi.PostAccountsIdSpend400TextResponse("amount should be positive value")
+		res := openapi.Spend400TextResponse("amount should be positive value")
 		return res, nil
 	}
 	amount := strconv.Itoa(req.Body.Amount)
@@ -215,7 +215,7 @@ func (server Server) PostAccountsIdSpend(ctx context.Context, req openapi.PostAc
 
 	if req.Body.Amount > balance {
 		msg := fmt.Sprintf("tried to spend %d, but balance was only %d", req.Body.Amount, balance)
-		res := openapi.PostAccountsIdSpend400TextResponse(msg)
+		res := openapi.Spend400TextResponse(msg)
 		return res, nil
 	}
 
@@ -241,14 +241,14 @@ func (server Server) PostAccountsIdSpend(ctx context.Context, req openapi.PostAc
 	}
 
 	txIdInt := int(txId)
-	res := openapi.PostAccountsIdSpend200JSONResponse{
+	res := openapi.Spend200JSONResponse{
 		TransactionId: &txIdInt,
 	}
 
 	return res, tx.Commit()
 }
 
-func (server Server) PostAccountsIdTransfer(ctx context.Context, req openapi.PostAccountsIdTransferRequestObject) (openapi.PostAccountsIdTransferResponseObject, error) {
+func (server Server) Transfer(ctx context.Context, req openapi.TransferRequestObject) (openapi.TransferResponseObject, error) {
 	tx, err := server.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
@@ -258,7 +258,7 @@ func (server Server) PostAccountsIdTransfer(ctx context.Context, req openapi.Pos
 	queries := sqlc.New(tx)
 
 	if req.Body.Amount <= 0 {
-		res := openapi.PostAccountsIdTransfer400TextResponse("amount should be positive value")
+		res := openapi.Transfer400TextResponse("amount should be positive value")
 		return res, nil
 	}
 	amount := strconv.Itoa(req.Body.Amount)
@@ -266,7 +266,7 @@ func (server Server) PostAccountsIdTransfer(ctx context.Context, req openapi.Pos
 	accountId := int64(req.Id)
 	balanceDecimal, err := queries.GetBalance(ctx, accountId)
 	if err == sql.ErrNoRows {
-		res := openapi.PostAccountsIdTransfer404Response{}
+		var res openapi.Transfer404Response
 		return res, nil
 	}
 
@@ -277,7 +277,7 @@ func (server Server) PostAccountsIdTransfer(ctx context.Context, req openapi.Pos
 
 	if req.Body.Amount > balance {
 		msg := fmt.Sprintf("tried to transfer %d, but balance was only %d", req.Body.Amount, balance)
-		res := openapi.PostAccountsIdTransfer400TextResponse(msg)
+		res := openapi.Transfer400TextResponse(msg)
 		return res, nil
 	}
 
@@ -285,7 +285,7 @@ func (server Server) PostAccountsIdTransfer(ctx context.Context, req openapi.Pos
 	_, err = queries.GetAccount(ctx, recipientId)
 	if err == sql.ErrNoRows {
 		msg := fmt.Sprintf("recipient was not found by id %d", recipientId)
-		res := openapi.PostAccountsIdTransfer400TextResponse(msg)
+		res := openapi.Transfer400TextResponse(msg)
 		return res, nil
 	}
 
@@ -322,7 +322,7 @@ func (server Server) PostAccountsIdTransfer(ctx context.Context, req openapi.Pos
 	}
 
 	txIdInt := int(txId)
-	res := openapi.PostAccountsIdTransfer200JSONResponse{
+	res := openapi.Transfer200JSONResponse{
 		TransactionId: &txIdInt,
 	}
 

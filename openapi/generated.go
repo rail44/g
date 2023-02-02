@@ -63,59 +63,59 @@ type TransferType string
 // AccountId defines model for AccountId.
 type AccountId = int
 
-// PostAccountsRegisterJSONBody defines parameters for PostAccountsRegister.
-type PostAccountsRegisterJSONBody struct {
+// RegisterJSONBody defines parameters for Register.
+type RegisterJSONBody struct {
 	Name string `json:"name"`
 }
 
-// PostAccountsIdMintJSONBody defines parameters for PostAccountsIdMint.
-type PostAccountsIdMintJSONBody struct {
+// MintJSONBody defines parameters for Mint.
+type MintJSONBody struct {
 	Amount int `json:"amount"`
 }
 
-// PostAccountsIdSpendJSONBody defines parameters for PostAccountsIdSpend.
-type PostAccountsIdSpendJSONBody struct {
+// SpendJSONBody defines parameters for Spend.
+type SpendJSONBody struct {
 	Amount int `json:"amount"`
 }
 
-// PostAccountsIdTransferJSONBody defines parameters for PostAccountsIdTransfer.
-type PostAccountsIdTransferJSONBody struct {
+// TransferJSONBody defines parameters for Transfer.
+type TransferJSONBody struct {
 	Amount int `json:"amount"`
 	To     int `json:"to"`
 }
 
-// PostAccountsRegisterJSONRequestBody defines body for PostAccountsRegister for application/json ContentType.
-type PostAccountsRegisterJSONRequestBody PostAccountsRegisterJSONBody
+// RegisterJSONRequestBody defines body for Register for application/json ContentType.
+type RegisterJSONRequestBody RegisterJSONBody
 
-// PostAccountsIdMintJSONRequestBody defines body for PostAccountsIdMint for application/json ContentType.
-type PostAccountsIdMintJSONRequestBody PostAccountsIdMintJSONBody
+// MintJSONRequestBody defines body for Mint for application/json ContentType.
+type MintJSONRequestBody MintJSONBody
 
-// PostAccountsIdSpendJSONRequestBody defines body for PostAccountsIdSpend for application/json ContentType.
-type PostAccountsIdSpendJSONRequestBody PostAccountsIdSpendJSONBody
+// SpendJSONRequestBody defines body for Spend for application/json ContentType.
+type SpendJSONRequestBody SpendJSONBody
 
-// PostAccountsIdTransferJSONRequestBody defines body for PostAccountsIdTransfer for application/json ContentType.
-type PostAccountsIdTransferJSONRequestBody PostAccountsIdTransferJSONBody
+// TransferJSONRequestBody defines body for Transfer for application/json ContentType.
+type TransferJSONRequestBody TransferJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
 	// (POST /accounts/register)
-	PostAccountsRegister(w http.ResponseWriter, r *http.Request)
+	Register(w http.ResponseWriter, r *http.Request)
 
 	// (GET /accounts/{id}/balance)
-	GetAccountsIdBalance(w http.ResponseWriter, r *http.Request, id AccountId)
+	Balance(w http.ResponseWriter, r *http.Request, id AccountId)
 
 	// (POST /accounts/{id}/mint)
-	PostAccountsIdMint(w http.ResponseWriter, r *http.Request, id AccountId)
+	Mint(w http.ResponseWriter, r *http.Request, id AccountId)
 
 	// (POST /accounts/{id}/spend)
-	PostAccountsIdSpend(w http.ResponseWriter, r *http.Request, id AccountId)
+	Spend(w http.ResponseWriter, r *http.Request, id AccountId)
 
 	// (GET /accounts/{id}/transactions)
-	GetAccountsIdTransactions(w http.ResponseWriter, r *http.Request, id AccountId)
+	Transactions(w http.ResponseWriter, r *http.Request, id AccountId)
 
 	// (POST /accounts/{id}/transfer)
-	PostAccountsIdTransfer(w http.ResponseWriter, r *http.Request, id AccountId)
+	Transfer(w http.ResponseWriter, r *http.Request, id AccountId)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -127,12 +127,12 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
-// PostAccountsRegister operation middleware
-func (siw *ServerInterfaceWrapper) PostAccountsRegister(w http.ResponseWriter, r *http.Request) {
+// Register operation middleware
+func (siw *ServerInterfaceWrapper) Register(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PostAccountsRegister(w, r)
+		siw.Handler.Register(w, r)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -142,8 +142,8 @@ func (siw *ServerInterfaceWrapper) PostAccountsRegister(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetAccountsIdBalance operation middleware
-func (siw *ServerInterfaceWrapper) GetAccountsIdBalance(w http.ResponseWriter, r *http.Request) {
+// Balance operation middleware
+func (siw *ServerInterfaceWrapper) Balance(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
@@ -158,7 +158,7 @@ func (siw *ServerInterfaceWrapper) GetAccountsIdBalance(w http.ResponseWriter, r
 	}
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAccountsIdBalance(w, r, id)
+		siw.Handler.Balance(w, r, id)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -168,8 +168,8 @@ func (siw *ServerInterfaceWrapper) GetAccountsIdBalance(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// PostAccountsIdMint operation middleware
-func (siw *ServerInterfaceWrapper) PostAccountsIdMint(w http.ResponseWriter, r *http.Request) {
+// Mint operation middleware
+func (siw *ServerInterfaceWrapper) Mint(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
@@ -184,7 +184,7 @@ func (siw *ServerInterfaceWrapper) PostAccountsIdMint(w http.ResponseWriter, r *
 	}
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PostAccountsIdMint(w, r, id)
+		siw.Handler.Mint(w, r, id)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -194,8 +194,8 @@ func (siw *ServerInterfaceWrapper) PostAccountsIdMint(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// PostAccountsIdSpend operation middleware
-func (siw *ServerInterfaceWrapper) PostAccountsIdSpend(w http.ResponseWriter, r *http.Request) {
+// Spend operation middleware
+func (siw *ServerInterfaceWrapper) Spend(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
@@ -210,7 +210,7 @@ func (siw *ServerInterfaceWrapper) PostAccountsIdSpend(w http.ResponseWriter, r 
 	}
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PostAccountsIdSpend(w, r, id)
+		siw.Handler.Spend(w, r, id)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -220,8 +220,8 @@ func (siw *ServerInterfaceWrapper) PostAccountsIdSpend(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetAccountsIdTransactions operation middleware
-func (siw *ServerInterfaceWrapper) GetAccountsIdTransactions(w http.ResponseWriter, r *http.Request) {
+// Transactions operation middleware
+func (siw *ServerInterfaceWrapper) Transactions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
@@ -236,7 +236,7 @@ func (siw *ServerInterfaceWrapper) GetAccountsIdTransactions(w http.ResponseWrit
 	}
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAccountsIdTransactions(w, r, id)
+		siw.Handler.Transactions(w, r, id)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -246,8 +246,8 @@ func (siw *ServerInterfaceWrapper) GetAccountsIdTransactions(w http.ResponseWrit
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// PostAccountsIdTransfer operation middleware
-func (siw *ServerInterfaceWrapper) PostAccountsIdTransfer(w http.ResponseWriter, r *http.Request) {
+// Transfer operation middleware
+func (siw *ServerInterfaceWrapper) Transfer(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
@@ -262,7 +262,7 @@ func (siw *ServerInterfaceWrapper) PostAccountsIdTransfer(w http.ResponseWriter,
 	}
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PostAccountsIdTransfer(w, r, id)
+		siw.Handler.Transfer(w, r, id)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -386,49 +386,49 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/accounts/register", wrapper.PostAccountsRegister)
+		r.Post(options.BaseURL+"/accounts/register", wrapper.Register)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/accounts/{id}/balance", wrapper.GetAccountsIdBalance)
+		r.Get(options.BaseURL+"/accounts/{id}/balance", wrapper.Balance)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/accounts/{id}/mint", wrapper.PostAccountsIdMint)
+		r.Post(options.BaseURL+"/accounts/{id}/mint", wrapper.Mint)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/accounts/{id}/spend", wrapper.PostAccountsIdSpend)
+		r.Post(options.BaseURL+"/accounts/{id}/spend", wrapper.Spend)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/accounts/{id}/transactions", wrapper.GetAccountsIdTransactions)
+		r.Get(options.BaseURL+"/accounts/{id}/transactions", wrapper.Transactions)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/accounts/{id}/transfer", wrapper.PostAccountsIdTransfer)
+		r.Post(options.BaseURL+"/accounts/{id}/transfer", wrapper.Transfer)
 	})
 
 	return r
 }
 
-type PostAccountsRegisterRequestObject struct {
-	Body *PostAccountsRegisterJSONRequestBody
+type RegisterRequestObject struct {
+	Body *RegisterJSONRequestBody
 }
 
-type PostAccountsRegisterResponseObject interface {
-	VisitPostAccountsRegisterResponse(w http.ResponseWriter) error
+type RegisterResponseObject interface {
+	VisitRegisterResponse(w http.ResponseWriter) error
 }
 
-type PostAccountsRegister200JSONResponse struct {
+type Register200JSONResponse struct {
 	AccountId *int `json:"accountId,omitempty"`
 }
 
-func (response PostAccountsRegister200JSONResponse) VisitPostAccountsRegisterResponse(w http.ResponseWriter) error {
+func (response Register200JSONResponse) VisitRegisterResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type PostAccountsRegister400TextResponse string
+type Register400TextResponse string
 
-func (response PostAccountsRegister400TextResponse) VisitPostAccountsRegisterResponse(w http.ResponseWriter) error {
+func (response Register400TextResponse) VisitRegisterResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(400)
 
@@ -436,56 +436,56 @@ func (response PostAccountsRegister400TextResponse) VisitPostAccountsRegisterRes
 	return err
 }
 
-type GetAccountsIdBalanceRequestObject struct {
+type BalanceRequestObject struct {
 	Id AccountId `json:"id"`
 }
 
-type GetAccountsIdBalanceResponseObject interface {
-	VisitGetAccountsIdBalanceResponse(w http.ResponseWriter) error
+type BalanceResponseObject interface {
+	VisitBalanceResponse(w http.ResponseWriter) error
 }
 
-type GetAccountsIdBalance200JSONResponse struct {
+type Balance200JSONResponse struct {
 	Balance *int `json:"balance,omitempty"`
 }
 
-func (response GetAccountsIdBalance200JSONResponse) VisitGetAccountsIdBalanceResponse(w http.ResponseWriter) error {
+func (response Balance200JSONResponse) VisitBalanceResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetAccountsIdBalance404Response struct {
+type Balance404Response struct {
 }
 
-func (response GetAccountsIdBalance404Response) VisitGetAccountsIdBalanceResponse(w http.ResponseWriter) error {
+func (response Balance404Response) VisitBalanceResponse(w http.ResponseWriter) error {
 	w.WriteHeader(404)
 	return nil
 }
 
-type PostAccountsIdMintRequestObject struct {
+type MintRequestObject struct {
 	Id   AccountId `json:"id"`
-	Body *PostAccountsIdMintJSONRequestBody
+	Body *MintJSONRequestBody
 }
 
-type PostAccountsIdMintResponseObject interface {
-	VisitPostAccountsIdMintResponse(w http.ResponseWriter) error
+type MintResponseObject interface {
+	VisitMintResponse(w http.ResponseWriter) error
 }
 
-type PostAccountsIdMint200JSONResponse struct {
+type Mint200JSONResponse struct {
 	TransactionId *int `json:"transactionId,omitempty"`
 }
 
-func (response PostAccountsIdMint200JSONResponse) VisitPostAccountsIdMintResponse(w http.ResponseWriter) error {
+func (response Mint200JSONResponse) VisitMintResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type PostAccountsIdMint400TextResponse string
+type Mint400TextResponse string
 
-func (response PostAccountsIdMint400TextResponse) VisitPostAccountsIdMintResponse(w http.ResponseWriter) error {
+func (response Mint400TextResponse) VisitMintResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(400)
 
@@ -493,37 +493,37 @@ func (response PostAccountsIdMint400TextResponse) VisitPostAccountsIdMintRespons
 	return err
 }
 
-type PostAccountsIdMint404Response struct {
+type Mint404Response struct {
 }
 
-func (response PostAccountsIdMint404Response) VisitPostAccountsIdMintResponse(w http.ResponseWriter) error {
+func (response Mint404Response) VisitMintResponse(w http.ResponseWriter) error {
 	w.WriteHeader(404)
 	return nil
 }
 
-type PostAccountsIdSpendRequestObject struct {
+type SpendRequestObject struct {
 	Id   AccountId `json:"id"`
-	Body *PostAccountsIdSpendJSONRequestBody
+	Body *SpendJSONRequestBody
 }
 
-type PostAccountsIdSpendResponseObject interface {
-	VisitPostAccountsIdSpendResponse(w http.ResponseWriter) error
+type SpendResponseObject interface {
+	VisitSpendResponse(w http.ResponseWriter) error
 }
 
-type PostAccountsIdSpend200JSONResponse struct {
+type Spend200JSONResponse struct {
 	TransactionId *int `json:"transactionId,omitempty"`
 }
 
-func (response PostAccountsIdSpend200JSONResponse) VisitPostAccountsIdSpendResponse(w http.ResponseWriter) error {
+func (response Spend200JSONResponse) VisitSpendResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type PostAccountsIdSpend400TextResponse string
+type Spend400TextResponse string
 
-func (response PostAccountsIdSpend400TextResponse) VisitPostAccountsIdSpendResponse(w http.ResponseWriter) error {
+func (response Spend400TextResponse) VisitSpendResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(400)
 
@@ -531,62 +531,62 @@ func (response PostAccountsIdSpend400TextResponse) VisitPostAccountsIdSpendRespo
 	return err
 }
 
-type PostAccountsIdSpend404Response struct {
+type Spend404Response struct {
 }
 
-func (response PostAccountsIdSpend404Response) VisitPostAccountsIdSpendResponse(w http.ResponseWriter) error {
+func (response Spend404Response) VisitSpendResponse(w http.ResponseWriter) error {
 	w.WriteHeader(404)
 	return nil
 }
 
-type GetAccountsIdTransactionsRequestObject struct {
+type TransactionsRequestObject struct {
 	Id AccountId `json:"id"`
 }
 
-type GetAccountsIdTransactionsResponseObject interface {
-	VisitGetAccountsIdTransactionsResponse(w http.ResponseWriter) error
+type TransactionsResponseObject interface {
+	VisitTransactionsResponse(w http.ResponseWriter) error
 }
 
-type GetAccountsIdTransactions200JSONResponse []interface{}
+type Transactions200JSONResponse []interface{}
 
-func (response GetAccountsIdTransactions200JSONResponse) VisitGetAccountsIdTransactionsResponse(w http.ResponseWriter) error {
+func (response Transactions200JSONResponse) VisitTransactionsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetAccountsIdTransactions404Response struct {
+type Transactions404Response struct {
 }
 
-func (response GetAccountsIdTransactions404Response) VisitGetAccountsIdTransactionsResponse(w http.ResponseWriter) error {
+func (response Transactions404Response) VisitTransactionsResponse(w http.ResponseWriter) error {
 	w.WriteHeader(404)
 	return nil
 }
 
-type PostAccountsIdTransferRequestObject struct {
+type TransferRequestObject struct {
 	Id   AccountId `json:"id"`
-	Body *PostAccountsIdTransferJSONRequestBody
+	Body *TransferJSONRequestBody
 }
 
-type PostAccountsIdTransferResponseObject interface {
-	VisitPostAccountsIdTransferResponse(w http.ResponseWriter) error
+type TransferResponseObject interface {
+	VisitTransferResponse(w http.ResponseWriter) error
 }
 
-type PostAccountsIdTransfer200JSONResponse struct {
+type Transfer200JSONResponse struct {
 	TransactionId *int `json:"transactionId,omitempty"`
 }
 
-func (response PostAccountsIdTransfer200JSONResponse) VisitPostAccountsIdTransferResponse(w http.ResponseWriter) error {
+func (response Transfer200JSONResponse) VisitTransferResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type PostAccountsIdTransfer400TextResponse string
+type Transfer400TextResponse string
 
-func (response PostAccountsIdTransfer400TextResponse) VisitPostAccountsIdTransferResponse(w http.ResponseWriter) error {
+func (response Transfer400TextResponse) VisitTransferResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(400)
 
@@ -594,10 +594,10 @@ func (response PostAccountsIdTransfer400TextResponse) VisitPostAccountsIdTransfe
 	return err
 }
 
-type PostAccountsIdTransfer404Response struct {
+type Transfer404Response struct {
 }
 
-func (response PostAccountsIdTransfer404Response) VisitPostAccountsIdTransferResponse(w http.ResponseWriter) error {
+func (response Transfer404Response) VisitTransferResponse(w http.ResponseWriter) error {
 	w.WriteHeader(404)
 	return nil
 }
@@ -606,22 +606,22 @@ func (response PostAccountsIdTransfer404Response) VisitPostAccountsIdTransferRes
 type StrictServerInterface interface {
 
 	// (POST /accounts/register)
-	PostAccountsRegister(ctx context.Context, request PostAccountsRegisterRequestObject) (PostAccountsRegisterResponseObject, error)
+	Register(ctx context.Context, request RegisterRequestObject) (RegisterResponseObject, error)
 
 	// (GET /accounts/{id}/balance)
-	GetAccountsIdBalance(ctx context.Context, request GetAccountsIdBalanceRequestObject) (GetAccountsIdBalanceResponseObject, error)
+	Balance(ctx context.Context, request BalanceRequestObject) (BalanceResponseObject, error)
 
 	// (POST /accounts/{id}/mint)
-	PostAccountsIdMint(ctx context.Context, request PostAccountsIdMintRequestObject) (PostAccountsIdMintResponseObject, error)
+	Mint(ctx context.Context, request MintRequestObject) (MintResponseObject, error)
 
 	// (POST /accounts/{id}/spend)
-	PostAccountsIdSpend(ctx context.Context, request PostAccountsIdSpendRequestObject) (PostAccountsIdSpendResponseObject, error)
+	Spend(ctx context.Context, request SpendRequestObject) (SpendResponseObject, error)
 
 	// (GET /accounts/{id}/transactions)
-	GetAccountsIdTransactions(ctx context.Context, request GetAccountsIdTransactionsRequestObject) (GetAccountsIdTransactionsResponseObject, error)
+	Transactions(ctx context.Context, request TransactionsRequestObject) (TransactionsResponseObject, error)
 
 	// (POST /accounts/{id}/transfer)
-	PostAccountsIdTransfer(ctx context.Context, request PostAccountsIdTransferRequestObject) (PostAccountsIdTransferResponseObject, error)
+	Transfer(ctx context.Context, request TransferRequestObject) (TransferResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, args interface{}) (interface{}, error)
@@ -654,11 +654,11 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
-// PostAccountsRegister operation middleware
-func (sh *strictHandler) PostAccountsRegister(w http.ResponseWriter, r *http.Request) {
-	var request PostAccountsRegisterRequestObject
+// Register operation middleware
+func (sh *strictHandler) Register(w http.ResponseWriter, r *http.Request) {
+	var request RegisterRequestObject
 
-	var body PostAccountsRegisterJSONRequestBody
+	var body RegisterJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -666,18 +666,18 @@ func (sh *strictHandler) PostAccountsRegister(w http.ResponseWriter, r *http.Req
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PostAccountsRegister(ctx, request.(PostAccountsRegisterRequestObject))
+		return sh.ssi.Register(ctx, request.(RegisterRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PostAccountsRegister")
+		handler = middleware(handler, "Register")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PostAccountsRegisterResponseObject); ok {
-		if err := validResponse.VisitPostAccountsRegisterResponse(w); err != nil {
+	} else if validResponse, ok := response.(RegisterResponseObject); ok {
+		if err := validResponse.VisitRegisterResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -685,25 +685,25 @@ func (sh *strictHandler) PostAccountsRegister(w http.ResponseWriter, r *http.Req
 	}
 }
 
-// GetAccountsIdBalance operation middleware
-func (sh *strictHandler) GetAccountsIdBalance(w http.ResponseWriter, r *http.Request, id AccountId) {
-	var request GetAccountsIdBalanceRequestObject
+// Balance operation middleware
+func (sh *strictHandler) Balance(w http.ResponseWriter, r *http.Request, id AccountId) {
+	var request BalanceRequestObject
 
 	request.Id = id
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetAccountsIdBalance(ctx, request.(GetAccountsIdBalanceRequestObject))
+		return sh.ssi.Balance(ctx, request.(BalanceRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetAccountsIdBalance")
+		handler = middleware(handler, "Balance")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetAccountsIdBalanceResponseObject); ok {
-		if err := validResponse.VisitGetAccountsIdBalanceResponse(w); err != nil {
+	} else if validResponse, ok := response.(BalanceResponseObject); ok {
+		if err := validResponse.VisitBalanceResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -711,13 +711,13 @@ func (sh *strictHandler) GetAccountsIdBalance(w http.ResponseWriter, r *http.Req
 	}
 }
 
-// PostAccountsIdMint operation middleware
-func (sh *strictHandler) PostAccountsIdMint(w http.ResponseWriter, r *http.Request, id AccountId) {
-	var request PostAccountsIdMintRequestObject
+// Mint operation middleware
+func (sh *strictHandler) Mint(w http.ResponseWriter, r *http.Request, id AccountId) {
+	var request MintRequestObject
 
 	request.Id = id
 
-	var body PostAccountsIdMintJSONRequestBody
+	var body MintJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -725,18 +725,18 @@ func (sh *strictHandler) PostAccountsIdMint(w http.ResponseWriter, r *http.Reque
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PostAccountsIdMint(ctx, request.(PostAccountsIdMintRequestObject))
+		return sh.ssi.Mint(ctx, request.(MintRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PostAccountsIdMint")
+		handler = middleware(handler, "Mint")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PostAccountsIdMintResponseObject); ok {
-		if err := validResponse.VisitPostAccountsIdMintResponse(w); err != nil {
+	} else if validResponse, ok := response.(MintResponseObject); ok {
+		if err := validResponse.VisitMintResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -744,13 +744,13 @@ func (sh *strictHandler) PostAccountsIdMint(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-// PostAccountsIdSpend operation middleware
-func (sh *strictHandler) PostAccountsIdSpend(w http.ResponseWriter, r *http.Request, id AccountId) {
-	var request PostAccountsIdSpendRequestObject
+// Spend operation middleware
+func (sh *strictHandler) Spend(w http.ResponseWriter, r *http.Request, id AccountId) {
+	var request SpendRequestObject
 
 	request.Id = id
 
-	var body PostAccountsIdSpendJSONRequestBody
+	var body SpendJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -758,18 +758,18 @@ func (sh *strictHandler) PostAccountsIdSpend(w http.ResponseWriter, r *http.Requ
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PostAccountsIdSpend(ctx, request.(PostAccountsIdSpendRequestObject))
+		return sh.ssi.Spend(ctx, request.(SpendRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PostAccountsIdSpend")
+		handler = middleware(handler, "Spend")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PostAccountsIdSpendResponseObject); ok {
-		if err := validResponse.VisitPostAccountsIdSpendResponse(w); err != nil {
+	} else if validResponse, ok := response.(SpendResponseObject); ok {
+		if err := validResponse.VisitSpendResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -777,25 +777,25 @@ func (sh *strictHandler) PostAccountsIdSpend(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// GetAccountsIdTransactions operation middleware
-func (sh *strictHandler) GetAccountsIdTransactions(w http.ResponseWriter, r *http.Request, id AccountId) {
-	var request GetAccountsIdTransactionsRequestObject
+// Transactions operation middleware
+func (sh *strictHandler) Transactions(w http.ResponseWriter, r *http.Request, id AccountId) {
+	var request TransactionsRequestObject
 
 	request.Id = id
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetAccountsIdTransactions(ctx, request.(GetAccountsIdTransactionsRequestObject))
+		return sh.ssi.Transactions(ctx, request.(TransactionsRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetAccountsIdTransactions")
+		handler = middleware(handler, "Transactions")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetAccountsIdTransactionsResponseObject); ok {
-		if err := validResponse.VisitGetAccountsIdTransactionsResponse(w); err != nil {
+	} else if validResponse, ok := response.(TransactionsResponseObject); ok {
+		if err := validResponse.VisitTransactionsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -803,13 +803,13 @@ func (sh *strictHandler) GetAccountsIdTransactions(w http.ResponseWriter, r *htt
 	}
 }
 
-// PostAccountsIdTransfer operation middleware
-func (sh *strictHandler) PostAccountsIdTransfer(w http.ResponseWriter, r *http.Request, id AccountId) {
-	var request PostAccountsIdTransferRequestObject
+// Transfer operation middleware
+func (sh *strictHandler) Transfer(w http.ResponseWriter, r *http.Request, id AccountId) {
+	var request TransferRequestObject
 
 	request.Id = id
 
-	var body PostAccountsIdTransferJSONRequestBody
+	var body TransferJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -817,18 +817,18 @@ func (sh *strictHandler) PostAccountsIdTransfer(w http.ResponseWriter, r *http.R
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PostAccountsIdTransfer(ctx, request.(PostAccountsIdTransferRequestObject))
+		return sh.ssi.Transfer(ctx, request.(TransferRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PostAccountsIdTransfer")
+		handler = middleware(handler, "Transfer")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PostAccountsIdTransferResponseObject); ok {
-		if err := validResponse.VisitPostAccountsIdTransferResponse(w); err != nil {
+	} else if validResponse, ok := response.(TransferResponseObject); ok {
+		if err := validResponse.VisitTransferResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

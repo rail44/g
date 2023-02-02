@@ -5,6 +5,7 @@ info:
 paths:
   /accounts/{id}/balance:
     get:
+      operationId: Balance
       parameters:
         - $ref: '#/components/parameters/AccountId'
       responses:
@@ -19,6 +20,7 @@ paths:
         404: {}
   /accounts/{id}/transactions:
     get:
+      operationId: Transactions
       parameters:
         - $ref: '#/components/parameters/AccountId'
       responses:
@@ -34,6 +36,7 @@ paths:
         404: {}
   /accounts/register:
     post:
+      operationId: Register
       requestBody:
         content:
           application/json:
@@ -62,6 +65,7 @@ paths:
                 type: string
   /accounts/{id}/mint:
     post:
+      operationId: Mint
       parameters:
         - $ref: '#/components/parameters/AccountId'
       requestBody:
@@ -91,6 +95,7 @@ paths:
         404: {}
   /accounts/{id}/spend:
     post:
+      operationId: Spend
       parameters:
         - $ref: '#/components/parameters/AccountId'
       requestBody:
@@ -120,6 +125,7 @@ paths:
         404: {}
   /accounts/{id}/transfer:
     post:
+      operationId: Transfer
       parameters:
         - $ref: '#/components/parameters/AccountId'
       requestBody:
@@ -159,6 +165,11 @@ components:
         type: integer
       required: true
   schemas:
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
     Mint:
       type: object
       properties:
