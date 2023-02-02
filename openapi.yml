@@ -27,6 +27,12 @@ paths:
                     type: integer
                 required:
                   - name
+        400:
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                type: string
   /accounts/{id}/balance:
     get:
       parameters:
@@ -44,7 +50,7 @@ paths:
                 type: object
                 properties:
                   balance:
-                    type: string # decimal
+                    type: integer
         404:
           description: Not Found
   /accounts/{id}/mint:
@@ -62,7 +68,7 @@ paths:
               type: object
               properties:
                 amount:
-                  type: string # decimal
+                  type: integer
               required:
                 - amount
       responses:
@@ -77,3 +83,16 @@ paths:
                     type: integer
                 required:
                   - name
+        400:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactionId:
+                    type: integer
+                required:
+                  - name
+        404:
+          description: Not Found

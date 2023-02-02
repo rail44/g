@@ -20,7 +20,7 @@ type PostAccountsRegisterJSONBody struct {
 
 // PostAccountsIdMintJSONBody defines parameters for PostAccountsIdMint.
 type PostAccountsIdMintJSONBody struct {
-	Amount string `json:"amount"`
+	Amount int `json:"amount"`
 }
 
 // PostAccountsRegisterJSONRequestBody defines body for PostAccountsRegister for application/json ContentType.
@@ -263,6 +263,16 @@ func (response PostAccountsRegister200JSONResponse) VisitPostAccountsRegisterRes
 	return json.NewEncoder(w).Encode(response)
 }
 
+type PostAccountsRegister400TextResponse string
+
+func (response PostAccountsRegister400TextResponse) VisitPostAccountsRegisterResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(400)
+
+	_, err := w.Write([]byte(response))
+	return err
+}
+
 type GetAccountsIdBalanceRequestObject struct {
 	Id int `json:"id"`
 }
@@ -272,7 +282,7 @@ type GetAccountsIdBalanceResponseObject interface {
 }
 
 type GetAccountsIdBalance200JSONResponse struct {
-	Balance *string `json:"balance,omitempty"`
+	Balance *int `json:"balance,omitempty"`
 }
 
 func (response GetAccountsIdBalance200JSONResponse) VisitGetAccountsIdBalanceResponse(w http.ResponseWriter) error {
@@ -308,6 +318,25 @@ func (response PostAccountsIdMint200JSONResponse) VisitPostAccountsIdMintRespons
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
+}
+
+type PostAccountsIdMint400JSONResponse struct {
+	TransactionId *int `json:"transactionId,omitempty"`
+}
+
+func (response PostAccountsIdMint400JSONResponse) VisitPostAccountsIdMintResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PostAccountsIdMint404Response struct {
+}
+
+func (response PostAccountsIdMint404Response) VisitPostAccountsIdMintResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
 }
 
 // StrictServerInterface represents all server handlers.

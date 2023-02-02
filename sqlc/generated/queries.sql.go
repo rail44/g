@@ -10,6 +10,22 @@ import (
 	"database/sql"
 )
 
+const getAccount = `-- name: GetAccount :one
+SELECT id, inserted_at, updated_at, name FROM accounts WHERE id=$1 LIMIT 1
+`
+
+func (q *Queries) GetAccount(ctx context.Context, id int64) (Account, error) {
+	row := q.db.QueryRowContext(ctx, getAccount, id)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.InsertedAt,
+		&i.UpdatedAt,
+		&i.Name,
+	)
+	return i, err
+}
+
 const getBalance = `-- name: GetBalance :one
 SELECT account, balance FROM balances WHERE account=$1 LIMIT 1
 `

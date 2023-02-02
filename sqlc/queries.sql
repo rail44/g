@@ -1,3 +1,6 @@
+-- name: GetAccount :one
+SELECT * FROM accounts WHERE id=$1 LIMIT 1;
+
 -- name: GetBalance :one
 SELECT * FROM balances WHERE account=$1 LIMIT 1;
 

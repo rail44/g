@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	// "flag"
 	"database/sql"
@@ -32,8 +33,8 @@ type Server struct {
 
 func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAccountsIdBalanceRequestObject) (openapi.GetAccountsIdBalanceResponseObject, error) {
 	queries := sqlc.New(server.db)
-	model, err := queries.GetBalance(ctx, int64(req.Id))
 
+	model, err := queries.GetBalance(ctx, int64(req.Id))
 	if err == sql.ErrNoRows {
 		res := openapi.GetAccountsIdBalance404Response{}
 		return res, nil
@@ -43,8 +44,12 @@ func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAc
 		return nil, fmt.Errorf("query GetBalance: %w", err)
 	}
 
+	balance, err := strconv.Atoi(model.Balance)
+	if err != nil {
+		return nil, fmt.Errorf("parse balance as decimal: %w", err)
+	}
 	res := openapi.GetAccountsIdBalance200JSONResponse{
-		Balance: &model.Balance,
+		Balance: &balance,
 	}
 	return res, nil
 }
@@ -57,7 +62,13 @@ func (server Server) PostAccountsRegister(ctx context.Context, req openapi.PostA
 	defer tx.Rollback()
 	queries := sqlc.New(tx)
 
-	accountId, err := queries.InsertAccount(ctx, sql.NullString{String: req.Body.Name, Valid: true})
+	name := req.Body.Name
+	if len(name) == 0 {
+		res := openapi.PostAccountsRegister400TextResponse("name is not presented")
+		return res, nil
+	}
+
+	accountId, err := queries.InsertAccount(ctx, sql.NullString{String: name, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("query InsertAccount: %w", err)
 	}
@@ -83,9 +94,19 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 	defer tx.Rollback()
 
 	queries := sqlc.New(tx)
+
+	amount := strconv.Itoa(req.Body.Amount)
+
+	accountId := int64(req.Id)
+	_, err = queries.GetAccount(ctx, accountId)
+	if err == sql.ErrNoRows {
+		res := openapi.PostAccountsIdMint404Response{}
+		return res, nil
+	}
+
 	mintId, err := queries.InsertMint(ctx, sqlc.InsertMintParams{
-		Account: int64(req.Id),
-		Amount:  req.Body.Amount,
+		Account: accountId,
+		Amount:  amount,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
@@ -100,8 +121,8 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 	}
 
 	err = queries.IncrementBalance(ctx, sqlc.IncrementBalanceParams{
-		Account: int64(req.Id),
-		Amount:  req.Body.Amount,
+		Account: accountId,
+		Amount:  amount,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
@@ -111,7 +132,8 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 	res := openapi.PostAccountsIdMint200JSONResponse{
 		TransactionId: &txIdInt,
 	}
-	return res, nil
+
+	return res, tx.Commit()
 }
 
 func main() {
