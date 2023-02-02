@@ -27,11 +27,12 @@ func (trastport *GraphqlTranstport) RoundTrip(req *http.Request) (*http.Response
 }
 
 type Server struct {
-	queries *sqlc.Queries
+	db *sql.DB
 }
 
 func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAccountsIdBalanceRequestObject) (openapi.GetAccountsIdBalanceResponseObject, error) {
-	model, err := server.queries.GetBalance(ctx, int64(req.Id))
+	queries := sqlc.New(server.db)
+	model, err := queries.GetBalance(ctx, int64(req.Id))
 
 	if err == sql.ErrNoRows {
 		res := openapi.GetAccountsIdBalance404Response{}
@@ -39,7 +40,7 @@ func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAc
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query GetBalance: %w", err)
+		return nil, fmt.Errorf("query GetBalance: %w", err)
 	}
 
 	res := openapi.GetAccountsIdBalance200JSONResponse{
@@ -49,44 +50,59 @@ func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAc
 }
 
 func (server Server) PostAccountsRegister(ctx context.Context, req openapi.PostAccountsRegisterRequestObject) (openapi.PostAccountsRegisterResponseObject, error) {
-	accountId, err := server.queries.InsertAccount(ctx, sql.NullString{String: req.Body.Name, Valid: true})
+	tx, err := server.db.Begin()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query InsertAccount: %w", err)
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+	queries := sqlc.New(tx)
+
+	accountId, err := queries.InsertAccount(ctx, sql.NullString{String: req.Body.Name, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("query InsertAccount: %w", err)
 	}
 
-	err = server.queries.InsertBalance(ctx, accountId)
+	err = queries.InsertBalance(ctx, accountId)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query InsertBalance: %w", err)
+		return nil, fmt.Errorf("query InsertBalance: %w", err)
 	}
 
 	accountIdInt := int(accountId)
 	res := openapi.PostAccountsRegister200JSONResponse{
 		AccountId: &accountIdInt,
 	}
-	return res, nil
+
+	return res, tx.Commit()
 }
 
 func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAccountsIdMintRequestObject) (openapi.PostAccountsIdMintResponseObject, error) {
-	mintId, err := server.queries.InsertMint(ctx, sqlc.InsertMintParams{
-                Account: int64(req.Id),
-                Amount: req.Body.Amount,
-        })
+	tx, err := server.db.Begin()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
+		return nil, fmt.Errorf("begin transaction: %w", err)
 	}
+	defer tx.Rollback()
 
-	txId, err := server.queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
-                Mint:     sql.NullInt64 { Int64: mintId, Valid: true },
-		Transfer: sql.NullInt64 {},
+	queries := sqlc.New(tx)
+	mintId, err := queries.InsertMint(ctx, sqlc.InsertMintParams{
+		Account: int64(req.Id),
+		Amount:  req.Body.Amount,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
 	}
 
-	err = server.queries.IncrementBalance(ctx, sqlc.IncrementBalanceParams{
-                Account: int64(req.Id),
-                Amount: req.Body.Amount,
-        })
+	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
+		Mint:     sql.NullInt64{Int64: mintId, Valid: true},
+		Transfer: sql.NullInt64{},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
+	}
+
+	err = queries.IncrementBalance(ctx, sqlc.IncrementBalanceParams{
+		Account: int64(req.Id),
+		Amount:  req.Body.Amount,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
 	}
@@ -103,8 +119,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	queries := sqlc.New(db)
 
-	server := Server{queries: queries}
+	server := Server{db: db}
 	http.ListenAndServe(":3000", openapi.Handler(openapi.NewStrictHandler(server, nil)))
 }
