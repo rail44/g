@@ -72,48 +72,47 @@ func (server Server) GetAccountsIdTransactions(ctx context.Context, req openapi.
 		return nil, fmt.Errorf("query GetTransactions: %w", err)
 	}
 
-        var res []interface{}
-        for i := range transactions {
-                tx := transactions[i]
-                if tx.MintID.Valid {
-                        amount, err  := strconv.Atoi(tx.MintAmount.String)
-                        if err != nil {
-                                return nil, fmt.Errorf("parse amount as decimal: %w", err)
-                        }
+	var res []interface{}
+	for i := range transactions {
+		tx := transactions[i]
+		if tx.MintID.Valid {
+			amount, err := strconv.Atoi(tx.MintAmount.String)
+			if err != nil {
+				return nil, fmt.Errorf("parse amount as decimal: %w", err)
+			}
 
-                        _type := openapi.MintTypeMint
-                        mint := openapi.Mint{ Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type }
-                        res = append(res, mint)
-                        continue;
-                }
+			_type := openapi.MintTypeMint
+			mint := openapi.Mint{Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type}
+			res = append(res, mint)
+			continue
+		}
 
-                if tx.SpendID.Valid {
-                        amount, err  := strconv.Atoi(tx.SpendAmount.String)
-                        if err != nil {
-                                return nil, fmt.Errorf("parse amount as decimal: %w", err)
-                        }
+		if tx.SpendID.Valid {
+			amount, err := strconv.Atoi(tx.SpendAmount.String)
+			if err != nil {
+				return nil, fmt.Errorf("parse amount as decimal: %w", err)
+			}
 
-                        _type := openapi.SpendTypeSpend
-                        spend := openapi.Spend{ Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type }
-                        res = append(res, spend)
-                        continue;
-                }
+			_type := openapi.SpendTypeSpend
+			spend := openapi.Spend{Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type}
+			res = append(res, spend)
+			continue
+		}
 
-                if tx.TransferID.Valid {
-                        amount, err  := strconv.Atoi(tx.TransferAmount.String)
-                        if err != nil {
-                                return nil, fmt.Errorf("parse amount as decimal: %w", err)
-                        }
+		if tx.TransferID.Valid {
+			amount, err := strconv.Atoi(tx.TransferAmount.String)
+			if err != nil {
+				return nil, fmt.Errorf("parse amount as decimal: %w", err)
+			}
 
-                        _type := openapi.TransferTypeTransfer
-                        recipient := int(tx.TransferRecipient.Int64)
-                        transfer := openapi.Transfer{ Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type, Recipient: &recipient }
-                        res = append(res, transfer)
-                        continue;
-                }
-                return nil, fmt.Errorf("failed to determine type of transaction")
-        }
-
+			_type := openapi.TransferTypeTransfer
+			recipient := int(tx.TransferRecipient.Int64)
+			transfer := openapi.Transfer{Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type, Recipient: &recipient}
+			res = append(res, transfer)
+			continue
+		}
+		return nil, fmt.Errorf("failed to determine type of transaction")
+	}
 
 	return openapi.GetAccountsIdTransactions200JSONResponse(res), nil
 }
