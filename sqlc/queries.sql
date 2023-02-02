@@ -2,7 +2,7 @@
 SELECT * FROM accounts WHERE id=$1 LIMIT 1;
 
 -- name: GetBalance :one
-SELECT * FROM balances WHERE account=$1 LIMIT 1;
+SELECT balance FROM balances WHERE account=$1 LIMIT 1;
 
 -- name: InsertAccount :one
 INSERT INTO accounts (
@@ -25,6 +25,13 @@ INSERT INTO mints (
   $1, $2
 ) RETURNING id;
 
+-- name: InsertTransfer :one
+INSERT INTO transfers (
+  from_account, to_account, amount
+) VALUES (
+  $1, $2, $3
+) RETURNING id;
+
 -- name: InsertTransaction :one
 INSERT INTO transactions (
   mint, transfer
@@ -34,4 +41,7 @@ INSERT INTO transactions (
 
 -- name: IncrementBalance :exec
 UPDATE balances SET balance = balance + sqlc.arg(amount) WHERE account=$1;
+
+-- name: DecrementBalance :exec
+UPDATE balances SET balance = balance - sqlc.arg(amount) WHERE account=$1;
 

@@ -34,7 +34,7 @@ type Server struct {
 func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAccountsIdBalanceRequestObject) (openapi.GetAccountsIdBalanceResponseObject, error) {
 	queries := sqlc.New(server.db)
 
-	model, err := queries.GetBalance(ctx, int64(req.Id))
+	balanceDecimal, err := queries.GetBalance(ctx, int64(req.Id))
 	if err == sql.ErrNoRows {
 		res := openapi.GetAccountsIdBalance404Response{}
 		return res, nil
@@ -44,7 +44,7 @@ func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAc
 		return nil, fmt.Errorf("query GetBalance: %w", err)
 	}
 
-	balance, err := strconv.Atoi(model.Balance)
+	balance, err := strconv.Atoi(balanceDecimal)
 	if err != nil {
 		return nil, fmt.Errorf("parse balance as decimal: %w", err)
 	}
@@ -130,6 +130,84 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 
 	txIdInt := int(txId)
 	res := openapi.PostAccountsIdMint200JSONResponse{
+		TransactionId: &txIdInt,
+	}
+
+	return res, tx.Commit()
+}
+
+func (server Server) PostAccountsIdTransfer(ctx context.Context, req openapi.PostAccountsIdTransferRequestObject) (openapi.PostAccountsIdTransferResponseObject, error) {
+	tx, err := server.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	queries := sqlc.New(tx)
+
+	amount := strconv.Itoa(req.Body.Amount)
+
+	fromAccountId := int64(req.Id)
+	balanceDecimal, err := queries.GetBalance(ctx, fromAccountId)
+	if err == sql.ErrNoRows {
+		res := openapi.PostAccountsIdTransfer404Response{}
+		return res, nil
+	}
+
+	balance, err := strconv.Atoi(balanceDecimal)
+	if err != nil {
+		return nil, fmt.Errorf("parse balance as decimal: %w", err)
+	}
+
+	if req.Body.Amount > balance {
+		msg := fmt.Sprintf("tried to transfer %d, but balance was only %d", req.Body.Amount, balance)
+		res := openapi.PostAccountsIdTransfer400TextResponse(msg)
+		return res, nil
+	}
+
+	toAccountId := int64(req.Body.To)
+	_, err = queries.GetAccount(ctx, toAccountId)
+	if err == sql.ErrNoRows {
+		msg := fmt.Sprintf("receipient was not found by id %d", toAccountId)
+		res := openapi.PostAccountsIdTransfer400TextResponse(msg)
+		return res, nil
+	}
+
+	transferId, err := queries.InsertTransfer(ctx, sqlc.InsertTransferParams{
+		FromAccount: fromAccountId,
+		ToAccount:   toAccountId,
+		Amount:      amount,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("query InsertTransfer: %w", err)
+	}
+
+	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
+		Transfer: sql.NullInt64{Int64: transferId, Valid: true},
+		Mint:     sql.NullInt64{},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("query InsertTransaction: %w", err)
+	}
+
+	err = queries.DecrementBalance(ctx, sqlc.DecrementBalanceParams{
+		Account: fromAccountId,
+		Amount:  amount,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("query DecrementBalance: %w", err)
+	}
+
+	err = queries.IncrementBalance(ctx, sqlc.IncrementBalanceParams{
+		Account: toAccountId,
+		Amount:  amount,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("query IncrementBalance: %w", err)
+	}
+
+	txIdInt := int(txId)
+	res := openapi.PostAccountsIdTransfer200JSONResponse{
 		TransactionId: &txIdInt,
 	}
 

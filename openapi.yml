@@ -17,7 +17,6 @@ paths:
                 - name
       responses:
         200:
-          description: OK
           content:
             application/json:
               schema:
@@ -28,7 +27,6 @@ paths:
                 required:
                   - name
         400:
-          description: Bad Request
           content:
             text/plain:
               schema:
@@ -43,7 +41,6 @@ paths:
           required: true
       responses:
         200:
-          description: OK
           content:
             application/json:
               schema:
@@ -51,8 +48,7 @@ paths:
                 properties:
                   balance:
                     type: integer
-        404:
-          description: Not Found
+        404: {}
   /accounts/{id}/mint:
     post:
       parameters:
@@ -73,7 +69,6 @@ paths:
                 - amount
       responses:
         200:
-          description: OK
           content:
             application/json:
               schema:
@@ -81,10 +76,35 @@ paths:
                 properties:
                   transactionId:
                     type: integer
-                required:
-                  - name
         400:
-          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+        404: {}
+  /accounts/{id}/transfer:
+    post:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                to:
+                  type: integer
+              required:
+                - amount
+                - to
+      responses:
+        200:
           content:
             application/json:
               schema:
@@ -92,7 +112,9 @@ paths:
                 properties:
                   transactionId:
                     type: integer
-                required:
-                  - name
-        404:
-          description: Not Found
+        400:
+          content:
+            text/plain:
+              schema:
+                type: string
+        404: {}

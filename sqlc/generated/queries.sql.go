@@ -10,6 +10,20 @@ import (
 	"database/sql"
 )
 
+const decrementBalance = `-- name: DecrementBalance :exec
+UPDATE balances SET balance = balance - $2 WHERE account=$1
+`
+
+type DecrementBalanceParams struct {
+	Account int64
+	Amount  string
+}
+
+func (q *Queries) DecrementBalance(ctx context.Context, arg DecrementBalanceParams) error {
+	_, err := q.db.ExecContext(ctx, decrementBalance, arg.Account, arg.Amount)
+	return err
+}
+
 const getAccount = `-- name: GetAccount :one
 SELECT id, inserted_at, updated_at, name FROM accounts WHERE id=$1 LIMIT 1
 `
@@ -27,14 +41,14 @@ func (q *Queries) GetAccount(ctx context.Context, id int64) (Account, error) {
 }
 
 const getBalance = `-- name: GetBalance :one
-SELECT account, balance FROM balances WHERE account=$1 LIMIT 1
+SELECT balance FROM balances WHERE account=$1 LIMIT 1
 `
 
-func (q *Queries) GetBalance(ctx context.Context, account int64) (Balance, error) {
+func (q *Queries) GetBalance(ctx context.Context, account int64) (string, error) {
 	row := q.db.QueryRowContext(ctx, getBalance, account)
-	var i Balance
-	err := row.Scan(&i.Account, &i.Balance)
-	return i, err
+	var balance string
+	err := row.Scan(&balance)
+	return balance, err
 }
 
 const incrementBalance = `-- name: IncrementBalance :exec
@@ -114,6 +128,27 @@ type InsertTransactionParams struct {
 
 func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, insertTransaction, arg.Mint, arg.Transfer)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertTransfer = `-- name: InsertTransfer :one
+INSERT INTO transfers (
+  from_account, to_account, amount
+) VALUES (
+  $1, $2, $3
+) RETURNING id
+`
+
+type InsertTransferParams struct {
+	FromAccount int64
+	ToAccount   int64
+	Amount      string
+}
+
+func (q *Queries) InsertTransfer(ctx context.Context, arg InsertTransferParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertTransfer, arg.FromAccount, arg.ToAccount, arg.Amount)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
