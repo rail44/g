@@ -41,7 +41,7 @@ type Transaction struct {
 }
 
 type Transfer struct {
-	ID         int64
-	Amount     string
-	Receipient int64
+	ID        int64
+	Amount    string
+	Recipient int64
 }

@@ -51,6 +51,65 @@ func (q *Queries) GetBalance(ctx context.Context, account int64) (string, error)
 	return balance, err
 }
 
+const getTransactions = `-- name: GetTransactions :many
+SELECT
+  mints.id AS mint_id,
+  mints.amount AS mint_amount,
+
+  spends.id AS spend_id,
+  spends.amount AS spend_amount,
+
+  transfers.id AS transfer_id,
+  transfers.amount AS transfer_amount,
+  transfers.recipient AS transfer_recipient
+FROM transactions
+LEFT OUTER JOIN mints ON transactions.mint=mints.id
+LEFT OUTER JOIN spends ON transactions.spend=spends.id
+LEFT OUTER JOIN transfers ON transactions.transfer=transfers.id
+WHERE account=$1 LIMIT 1
+`
+
+type GetTransactionsRow struct {
+	MintID            sql.NullInt64
+	MintAmount        sql.NullString
+	SpendID           sql.NullInt64
+	SpendAmount       sql.NullString
+	TransferID        sql.NullInt64
+	TransferAmount    sql.NullString
+	TransferRecipient sql.NullInt64
+}
+
+func (q *Queries) GetTransactions(ctx context.Context, account int64) ([]GetTransactionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTransactions, account)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTransactionsRow
+	for rows.Next() {
+		var i GetTransactionsRow
+		if err := rows.Scan(
+			&i.MintID,
+			&i.MintAmount,
+			&i.SpendID,
+			&i.SpendAmount,
+			&i.TransferID,
+			&i.TransferAmount,
+			&i.TransferRecipient,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const incrementBalance = `-- name: IncrementBalance :exec
 UPDATE balances SET balance = balance + $2 WHERE account=$1
 `
@@ -152,19 +211,19 @@ func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionPa
 
 const insertTransfer = `-- name: InsertTransfer :one
 INSERT INTO transfers (
-  receipient, amount
+  recipient, amount
 ) VALUES (
   $1, $2
 ) RETURNING id
 `
 
 type InsertTransferParams struct {
-	Receipient int64
-	Amount     string
+	Recipient int64
+	Amount    string
 }
 
 func (q *Queries) InsertTransfer(ctx context.Context, arg InsertTransferParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertTransfer, arg.Receipient, arg.Amount)
+	row := q.db.QueryRowContext(ctx, insertTransfer, arg.Recipient, arg.Amount)
 	var id int64
 	err := row.Scan(&id)
 	return id, err

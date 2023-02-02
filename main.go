@@ -54,6 +54,28 @@ func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAc
 	return res, nil
 }
 
+func (server Server) GetAccountsIdTransactions(ctx context.Context, req openapi.GetAccountsIdTransactionsRequestObject) (openapi.GetAccountsIdTransactionsResponseObject, error) {
+	queries := sqlc.New(server.db)
+
+	_, err := queries.GetAccount(ctx, int64(req.Id))
+	if err == sql.ErrNoRows {
+		res := openapi.GetAccountsIdTransactions404Response{}
+		return res, nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("query GetAccount: %w", err)
+	}
+
+	transactions, err := queries.GetTransactions(ctx, int64(req.Id))
+	if err != nil {
+		return nil, fmt.Errorf("query GetTransactions: %w", err)
+	}
+	fmt.Println("%v", transactions)
+
+	return nil, nil
+}
+
 func (server Server) PostAccountsRegister(ctx context.Context, req openapi.PostAccountsRegisterRequestObject) (openapi.PostAccountsRegisterResponseObject, error) {
 	tx, err := server.db.Begin()
 	if err != nil {
@@ -221,17 +243,17 @@ func (server Server) PostAccountsIdTransfer(ctx context.Context, req openapi.Pos
 		return res, nil
 	}
 
-	receipientId := int64(req.Body.To)
-	_, err = queries.GetAccount(ctx, receipientId)
+	recipientId := int64(req.Body.To)
+	_, err = queries.GetAccount(ctx, recipientId)
 	if err == sql.ErrNoRows {
-		msg := fmt.Sprintf("receipient was not found by id %d", receipientId)
+		msg := fmt.Sprintf("recipient was not found by id %d", recipientId)
 		res := openapi.PostAccountsIdTransfer400TextResponse(msg)
 		return res, nil
 	}
 
 	transferId, err := queries.InsertTransfer(ctx, sqlc.InsertTransferParams{
-		Receipient: receipientId,
-		Amount:     amount,
+		Recipient: recipientId,
+		Amount:    amount,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("query InsertTransfer: %w", err)
@@ -254,7 +276,7 @@ func (server Server) PostAccountsIdTransfer(ctx context.Context, req openapi.Pos
 	}
 
 	err = queries.IncrementBalance(ctx, sqlc.IncrementBalanceParams{
-		Account: receipientId,
+		Account: recipientId,
 		Amount:  amount,
 	})
 	if err != nil {

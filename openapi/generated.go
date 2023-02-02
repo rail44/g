@@ -13,6 +13,9 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// AccountId defines model for AccountId.
+type AccountId = int
+
 // PostAccountsRegisterJSONBody defines parameters for PostAccountsRegister.
 type PostAccountsRegisterJSONBody struct {
 	Name string `json:"name"`
@@ -53,16 +56,19 @@ type ServerInterface interface {
 	PostAccountsRegister(w http.ResponseWriter, r *http.Request)
 
 	// (GET /accounts/{id}/balance)
-	GetAccountsIdBalance(w http.ResponseWriter, r *http.Request, id int)
+	GetAccountsIdBalance(w http.ResponseWriter, r *http.Request, id AccountId)
 
 	// (POST /accounts/{id}/mint)
-	PostAccountsIdMint(w http.ResponseWriter, r *http.Request, id int)
+	PostAccountsIdMint(w http.ResponseWriter, r *http.Request, id AccountId)
 
 	// (POST /accounts/{id}/spend)
-	PostAccountsIdSpend(w http.ResponseWriter, r *http.Request, id int)
+	PostAccountsIdSpend(w http.ResponseWriter, r *http.Request, id AccountId)
+
+	// (GET /accounts/{id}/transactions)
+	GetAccountsIdTransactions(w http.ResponseWriter, r *http.Request, id AccountId)
 
 	// (POST /accounts/{id}/transfer)
-	PostAccountsIdTransfer(w http.ResponseWriter, r *http.Request, id int)
+	PostAccountsIdTransfer(w http.ResponseWriter, r *http.Request, id AccountId)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -96,7 +102,7 @@ func (siw *ServerInterfaceWrapper) GetAccountsIdBalance(w http.ResponseWriter, r
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id int
+	var id AccountId
 
 	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
 	if err != nil {
@@ -122,7 +128,7 @@ func (siw *ServerInterfaceWrapper) PostAccountsIdMint(w http.ResponseWriter, r *
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id int
+	var id AccountId
 
 	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
 	if err != nil {
@@ -148,7 +154,7 @@ func (siw *ServerInterfaceWrapper) PostAccountsIdSpend(w http.ResponseWriter, r 
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id int
+	var id AccountId
 
 	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
 	if err != nil {
@@ -167,6 +173,32 @@ func (siw *ServerInterfaceWrapper) PostAccountsIdSpend(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
+// GetAccountsIdTransactions operation middleware
+func (siw *ServerInterfaceWrapper) GetAccountsIdTransactions(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id AccountId
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAccountsIdTransactions(w, r, id)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
 // PostAccountsIdTransfer operation middleware
 func (siw *ServerInterfaceWrapper) PostAccountsIdTransfer(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -174,7 +206,7 @@ func (siw *ServerInterfaceWrapper) PostAccountsIdTransfer(w http.ResponseWriter,
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id int
+	var id AccountId
 
 	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
 	if err != nil {
@@ -319,6 +351,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/accounts/{id}/spend", wrapper.PostAccountsIdSpend)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/accounts/{id}/transactions", wrapper.GetAccountsIdTransactions)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/accounts/{id}/transfer", wrapper.PostAccountsIdTransfer)
 	})
 
@@ -355,7 +390,7 @@ func (response PostAccountsRegister400TextResponse) VisitPostAccountsRegisterRes
 }
 
 type GetAccountsIdBalanceRequestObject struct {
-	Id int `json:"id"`
+	Id AccountId `json:"id"`
 }
 
 type GetAccountsIdBalanceResponseObject interface {
@@ -382,7 +417,7 @@ func (response GetAccountsIdBalance404Response) VisitGetAccountsIdBalanceRespons
 }
 
 type PostAccountsIdMintRequestObject struct {
-	Id   int `json:"id"`
+	Id   AccountId `json:"id"`
 	Body *PostAccountsIdMintJSONRequestBody
 }
 
@@ -420,7 +455,7 @@ func (response PostAccountsIdMint404Response) VisitPostAccountsIdMintResponse(w 
 }
 
 type PostAccountsIdSpendRequestObject struct {
-	Id   int `json:"id"`
+	Id   AccountId `json:"id"`
 	Body *PostAccountsIdSpendJSONRequestBody
 }
 
@@ -457,8 +492,35 @@ func (response PostAccountsIdSpend404Response) VisitPostAccountsIdSpendResponse(
 	return nil
 }
 
+type GetAccountsIdTransactionsRequestObject struct {
+	Id AccountId `json:"id"`
+}
+
+type GetAccountsIdTransactionsResponseObject interface {
+	VisitGetAccountsIdTransactionsResponse(w http.ResponseWriter) error
+}
+
+type GetAccountsIdTransactions200JSONResponse struct {
+	Balance *int `json:"balance,omitempty"`
+}
+
+func (response GetAccountsIdTransactions200JSONResponse) VisitGetAccountsIdTransactionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetAccountsIdTransactions404Response struct {
+}
+
+func (response GetAccountsIdTransactions404Response) VisitGetAccountsIdTransactionsResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
 type PostAccountsIdTransferRequestObject struct {
-	Id   int `json:"id"`
+	Id   AccountId `json:"id"`
 	Body *PostAccountsIdTransferJSONRequestBody
 }
 
@@ -509,6 +571,9 @@ type StrictServerInterface interface {
 
 	// (POST /accounts/{id}/spend)
 	PostAccountsIdSpend(ctx context.Context, request PostAccountsIdSpendRequestObject) (PostAccountsIdSpendResponseObject, error)
+
+	// (GET /accounts/{id}/transactions)
+	GetAccountsIdTransactions(ctx context.Context, request GetAccountsIdTransactionsRequestObject) (GetAccountsIdTransactionsResponseObject, error)
 
 	// (POST /accounts/{id}/transfer)
 	PostAccountsIdTransfer(ctx context.Context, request PostAccountsIdTransferRequestObject) (PostAccountsIdTransferResponseObject, error)
@@ -576,7 +641,7 @@ func (sh *strictHandler) PostAccountsRegister(w http.ResponseWriter, r *http.Req
 }
 
 // GetAccountsIdBalance operation middleware
-func (sh *strictHandler) GetAccountsIdBalance(w http.ResponseWriter, r *http.Request, id int) {
+func (sh *strictHandler) GetAccountsIdBalance(w http.ResponseWriter, r *http.Request, id AccountId) {
 	var request GetAccountsIdBalanceRequestObject
 
 	request.Id = id
@@ -602,7 +667,7 @@ func (sh *strictHandler) GetAccountsIdBalance(w http.ResponseWriter, r *http.Req
 }
 
 // PostAccountsIdMint operation middleware
-func (sh *strictHandler) PostAccountsIdMint(w http.ResponseWriter, r *http.Request, id int) {
+func (sh *strictHandler) PostAccountsIdMint(w http.ResponseWriter, r *http.Request, id AccountId) {
 	var request PostAccountsIdMintRequestObject
 
 	request.Id = id
@@ -635,7 +700,7 @@ func (sh *strictHandler) PostAccountsIdMint(w http.ResponseWriter, r *http.Reque
 }
 
 // PostAccountsIdSpend operation middleware
-func (sh *strictHandler) PostAccountsIdSpend(w http.ResponseWriter, r *http.Request, id int) {
+func (sh *strictHandler) PostAccountsIdSpend(w http.ResponseWriter, r *http.Request, id AccountId) {
 	var request PostAccountsIdSpendRequestObject
 
 	request.Id = id
@@ -667,8 +732,34 @@ func (sh *strictHandler) PostAccountsIdSpend(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+// GetAccountsIdTransactions operation middleware
+func (sh *strictHandler) GetAccountsIdTransactions(w http.ResponseWriter, r *http.Request, id AccountId) {
+	var request GetAccountsIdTransactionsRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetAccountsIdTransactions(ctx, request.(GetAccountsIdTransactionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetAccountsIdTransactions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetAccountsIdTransactionsResponseObject); ok {
+		if err := validResponse.VisitGetAccountsIdTransactionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
 // PostAccountsIdTransfer operation middleware
-func (sh *strictHandler) PostAccountsIdTransfer(w http.ResponseWriter, r *http.Request, id int) {
+func (sh *strictHandler) PostAccountsIdTransfer(w http.ResponseWriter, r *http.Request, id AccountId) {
 	var request PostAccountsIdTransferRequestObject
 
 	request.Id = id

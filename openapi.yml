@@ -3,6 +3,34 @@ info:
   version: 0.1.0
   title: g
 paths:
+  /accounts/{id}/balance:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance:
+                    type: integer
+        404: {}
+  /accounts/{id}/transactions:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance:
+                    type: integer
+        404: {}
   /accounts/register:
     post:
       requestBody:
@@ -31,32 +59,10 @@ paths:
             text/plain:
               schema:
                 type: string
-  /accounts/{id}/balance:
-    get:
-      parameters:
-        - in: path
-          name: id
-          schema:
-            type: integer
-          required: true
-      responses:
-        200:
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  balance:
-                    type: integer
-        404: {}
   /accounts/{id}/mint:
     post:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: integer
-          required: true
+        - $ref: '#/components/parameters/AccountId'
       requestBody:
         content:
           application/json:
@@ -85,11 +91,7 @@ paths:
   /accounts/{id}/spend:
     post:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: integer
-          required: true
+        - $ref: '#/components/parameters/AccountId'
       requestBody:
         content:
           application/json:
@@ -118,11 +120,7 @@ paths:
   /accounts/{id}/transfer:
     post:
       parameters:
-        - in: path
-          name: id
-          schema:
-            type: integer
-          required: true
+        - $ref: '#/components/parameters/AccountId'
       requestBody:
         content:
           application/json:
@@ -151,3 +149,11 @@ paths:
               schema:
                 type: string
         404: {}
+components:
+  parameters:
+    AccountId:
+      in: path
+      name: id
+      schema:
+        type: integer
+      required: true

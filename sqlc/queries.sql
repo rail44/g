@@ -4,6 +4,23 @@ SELECT * FROM accounts WHERE id=$1 LIMIT 1;
 -- name: GetBalance :one
 SELECT balance FROM balances WHERE account=$1 LIMIT 1;
 
+-- name: GetTransactions :many
+SELECT
+  mints.id AS mint_id,
+  mints.amount AS mint_amount,
+
+  spends.id AS spend_id,
+  spends.amount AS spend_amount,
+
+  transfers.id AS transfer_id,
+  transfers.amount AS transfer_amount,
+  transfers.recipient AS transfer_recipient
+FROM transactions
+LEFT OUTER JOIN mints ON transactions.mint=mints.id
+LEFT OUTER JOIN spends ON transactions.spend=spends.id
+LEFT OUTER JOIN transfers ON transactions.transfer=transfers.id
+WHERE account=$1 LIMIT 1;
+
 -- name: InsertAccount :one
 INSERT INTO accounts (
   name
@@ -34,7 +51,7 @@ INSERT INTO spends (
 
 -- name: InsertTransfer :one
 INSERT INTO transfers (
-  receipient, amount
+  recipient, amount
 ) VALUES (
   $1, $2
 ) RETURNING id;
