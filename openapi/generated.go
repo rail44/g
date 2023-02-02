@@ -8,10 +8,57 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/go-chi/chi/v5"
 )
+
+// Defines values for MintType.
+const (
+	MintTypeMint MintType = "mint"
+)
+
+// Defines values for SpendType.
+const (
+	SpendTypeSpend SpendType = "spend"
+)
+
+// Defines values for TransferType.
+const (
+	TransferTypeTransfer TransferType = "transfer"
+)
+
+// Mint defines model for Mint.
+type Mint struct {
+	Amount     *int       `json:"amount,omitempty"`
+	InsertedAt *time.Time `json:"inserted_at,omitempty"`
+	Type       *MintType  `json:"type,omitempty"`
+}
+
+// MintType defines model for Mint.Type.
+type MintType string
+
+// Spend defines model for Spend.
+type Spend struct {
+	Amount     *int       `json:"amount,omitempty"`
+	InsertedAt *time.Time `json:"inserted_at,omitempty"`
+	Type       *SpendType `json:"type,omitempty"`
+}
+
+// SpendType defines model for Spend.Type.
+type SpendType string
+
+// Transfer defines model for Transfer.
+type Transfer struct {
+	Amount     *int          `json:"amount,omitempty"`
+	InsertedAt *time.Time    `json:"inserted_at,omitempty"`
+	Recipient  *int          `json:"recipient,omitempty"`
+	Type       *TransferType `json:"type,omitempty"`
+}
+
+// TransferType defines model for Transfer.Type.
+type TransferType string
 
 // AccountId defines model for AccountId.
 type AccountId = int
@@ -500,9 +547,7 @@ type GetAccountsIdTransactionsResponseObject interface {
 	VisitGetAccountsIdTransactionsResponse(w http.ResponseWriter) error
 }
 
-type GetAccountsIdTransactions200JSONResponse struct {
-	Balance *int `json:"balance,omitempty"`
-}
+type GetAccountsIdTransactions200JSONResponse []interface{}
 
 func (response GetAccountsIdTransactions200JSONResponse) VisitGetAccountsIdTransactionsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")

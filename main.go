@@ -36,7 +36,7 @@ func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAc
 
 	balanceDecimal, err := queries.GetBalance(ctx, int64(req.Id))
 	if err == sql.ErrNoRows {
-		res := openapi.GetAccountsIdBalance404Response{}
+		var res openapi.GetAccountsIdBalance404Response
 		return res, nil
 	}
 
@@ -59,7 +59,7 @@ func (server Server) GetAccountsIdTransactions(ctx context.Context, req openapi.
 
 	_, err := queries.GetAccount(ctx, int64(req.Id))
 	if err == sql.ErrNoRows {
-		res := openapi.GetAccountsIdTransactions404Response{}
+		var res openapi.GetAccountsIdTransactions404Response
 		return res, nil
 	}
 
@@ -71,9 +71,51 @@ func (server Server) GetAccountsIdTransactions(ctx context.Context, req openapi.
 	if err != nil {
 		return nil, fmt.Errorf("query GetTransactions: %w", err)
 	}
-	fmt.Println("%v", transactions)
 
-	return nil, nil
+        var res []interface{}
+        for i := range transactions {
+                tx := transactions[i]
+                if tx.MintID.Valid {
+                        amount, err  := strconv.Atoi(tx.MintAmount.String)
+                        if err != nil {
+                                return nil, fmt.Errorf("parse amount as decimal: %w", err)
+                        }
+
+                        _type := openapi.MintTypeMint
+                        mint := openapi.Mint{ Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type }
+                        res = append(res, mint)
+                        continue;
+                }
+
+                if tx.SpendID.Valid {
+                        amount, err  := strconv.Atoi(tx.SpendAmount.String)
+                        if err != nil {
+                                return nil, fmt.Errorf("parse amount as decimal: %w", err)
+                        }
+
+                        _type := openapi.SpendTypeSpend
+                        spend := openapi.Spend{ Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type }
+                        res = append(res, spend)
+                        continue;
+                }
+
+                if tx.TransferID.Valid {
+                        amount, err  := strconv.Atoi(tx.TransferAmount.String)
+                        if err != nil {
+                                return nil, fmt.Errorf("parse amount as decimal: %w", err)
+                        }
+
+                        _type := openapi.TransferTypeTransfer
+                        recipient := int(tx.TransferRecipient.Int64)
+                        transfer := openapi.Transfer{ Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type, Recipient: &recipient }
+                        res = append(res, transfer)
+                        continue;
+                }
+                return nil, fmt.Errorf("failed to determine type of transaction")
+        }
+
+
+	return openapi.GetAccountsIdTransactions200JSONResponse(res), nil
 }
 
 func (server Server) PostAccountsRegister(ctx context.Context, req openapi.PostAccountsRegisterRequestObject) (openapi.PostAccountsRegisterResponseObject, error) {
@@ -126,7 +168,7 @@ func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAcc
 	accountId := int64(req.Id)
 	_, err = queries.GetAccount(ctx, accountId)
 	if err == sql.ErrNoRows {
-		res := openapi.PostAccountsIdMint404Response{}
+		var res openapi.PostAccountsIdMint404Response
 		return res, nil
 	}
 

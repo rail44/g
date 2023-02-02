@@ -6,6 +6,8 @@ SELECT balance FROM balances WHERE account=$1 LIMIT 1;
 
 -- name: GetTransactions :many
 SELECT
+  inserted_at,
+
   mints.id AS mint_id,
   mints.amount AS mint_amount,
 
@@ -19,7 +21,7 @@ FROM transactions
 LEFT OUTER JOIN mints ON transactions.mint=mints.id
 LEFT OUTER JOIN spends ON transactions.spend=spends.id
 LEFT OUTER JOIN transfers ON transactions.transfer=transfers.id
-WHERE account=$1 LIMIT 1;
+WHERE account=$1 ORDER BY inserted_at ASC;
 
 -- name: InsertAccount :one
 INSERT INTO accounts (

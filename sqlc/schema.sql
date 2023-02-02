@@ -34,6 +34,8 @@ CREATE TABLE transactions (
   transfer BIGINT REFERENCES transfers UNIQUE,
   CONSTRAINT kind CHECK(num_nonnulls(mint, transfer, spend) = 1)
 );
+CREATE INDEX ON transactions (account);
+CREATE INDEX ON transactions (inserted_at);
 
 CREATE TABLE balances (
   account BIGINT REFERENCES accounts PRIMARY KEY NOT NULL,

@@ -26,10 +26,11 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  balance:
-                    type: integer
+                type: array
+                oneOf:
+                  - $ref: '#/components/schemas/Mint'
+                  - $ref: '#/components/schemas/Spend'
+                  - $ref: '#/components/schemas/Transfer'
         404: {}
   /accounts/register:
     post:
@@ -157,3 +158,39 @@ components:
       schema:
         type: integer
       required: true
+  schemas:
+    Mint:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: ["mint"]
+        inserted_at:
+          type: string
+          format: date-time
+        amount:
+          type: integer
+    Spend:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: ["spend"]
+        inserted_at:
+          type: string
+          format: date-time
+        amount:
+          type: integer
+    Transfer:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: ["transfer"]
+        inserted_at:
+          type: string
+          format: date-time
+        amount:
+          type: integer
+        recipient:
+          type: integer
