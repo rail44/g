@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"context"
+	"fmt"
 	"net/http"
 
 	// "flag"
@@ -27,20 +27,20 @@ func (trastport *GraphqlTranstport) RoundTrip(req *http.Request) (*http.Response
 }
 
 type Server struct {
-        queries *sqlc.Queries
+	queries *sqlc.Queries
 }
 
 func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAccountsIdBalanceRequestObject) (openapi.GetAccountsIdBalanceResponseObject, error) {
-        model, err := server.queries.GetBalance(ctx, int64(req.Id))
+	model, err := server.queries.GetBalance(ctx, int64(req.Id))
 
-        if err == sql.ErrNoRows {
-                res := openapi.GetAccountsIdBalance404Response {}
-                return res, nil
-        }
+	if err == sql.ErrNoRows {
+		res := openapi.GetAccountsIdBalance404Response{}
+		return res, nil
+	}
 
-        if err != nil {
-                return nil, fmt.Errorf("Failed to query GetBalance: %w", err)
-        }
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query GetBalance: %w", err)
+	}
 
 	res := openapi.GetAccountsIdBalance200JSONResponse{
 		Balance: &model.Balance,
@@ -49,25 +49,62 @@ func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAc
 }
 
 func (server Server) PostAccountsRegister(ctx context.Context, req openapi.PostAccountsRegisterRequestObject) (openapi.PostAccountsRegisterResponseObject, error) {
-        int64Id, err := server.queries.RegisterAccount(ctx, sql.NullString{ String: req.Body.Name, Valid: true })
-        if err != nil {
-                return nil, fmt.Errorf("Failed to query RegisterAccount: %w", err)
-        }
+	accountId, err := server.queries.InsertAccount(ctx, sql.NullString{String: req.Body.Name, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query InsertAccount: %w", err)
+	}
 
-        id := int(int64Id)
+	err = server.queries.InsertBalance(ctx, accountId)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query InsertBalance: %w", err)
+	}
+
+	accountIdInt := int(accountId)
 	res := openapi.PostAccountsRegister200JSONResponse{
-		AccountId: &id,
+		AccountId: &accountIdInt,
+	}
+	return res, nil
+}
+
+func (server Server) PostAccountsIdMint(ctx context.Context, req openapi.PostAccountsIdMintRequestObject) (openapi.PostAccountsIdMintResponseObject, error) {
+	mintId, err := server.queries.InsertMint(ctx, sqlc.InsertMintParams{
+                Account: int64(req.Id),
+                Amount: req.Body.Amount,
+        })
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
+	}
+
+	txId, err := server.queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
+                Mint:     sql.NullInt64 { Int64: mintId, Valid: true },
+		Transfer: sql.NullInt64 {},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
+	}
+
+	err = server.queries.IncrementBalance(ctx, sqlc.IncrementBalanceParams{
+                Account: int64(req.Id),
+                Amount: req.Body.Amount,
+        })
+	if err != nil {
+		return nil, fmt.Errorf("Failed to query InsertMint: %w", err)
+	}
+
+	txIdInt := int(txId)
+	res := openapi.PostAccountsIdMint200JSONResponse{
+		TransactionId: &txIdInt,
 	}
 	return res, nil
 }
 
 func main() {
-        db, err := sql.Open("postgres", "user=postgres dbname=g password=password host=localhost sslmode=disable")
-        if err != nil {
-                panic(err)
-        }
-        queries := sqlc.New(db)
+	db, err := sql.Open("postgres", "user=postgres dbname=g password=password host=localhost sslmode=disable")
+	if err != nil {
+		panic(err)
+	}
+	queries := sqlc.New(db)
 
-        server := Server{ queries: queries }
+	server := Server{queries: queries}
 	http.ListenAndServe(":3000", openapi.Handler(openapi.NewStrictHandler(server, nil)))
 }

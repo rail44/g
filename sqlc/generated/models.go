@@ -17,14 +17,14 @@ type Account struct {
 }
 
 type Balance struct {
-	ID      int64
+	Account int64
 	Balance string
 }
 
 type Mint struct {
 	ID      int64
+	Account int64
 	Amount  string
-	Account sql.NullInt64
 }
 
 type Transaction struct {
@@ -37,6 +37,6 @@ type Transaction struct {
 type Transfer struct {
 	ID          int64
 	Amount      string
-	FromAccount sql.NullInt64
-	ToAccount   sql.NullInt64
+	FromAccount int64
+	ToAccount   int64
 }

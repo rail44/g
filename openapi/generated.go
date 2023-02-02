@@ -18,8 +18,16 @@ type PostAccountsRegisterJSONBody struct {
 	Name string `json:"name"`
 }
 
+// PostAccountsIdMintJSONBody defines parameters for PostAccountsIdMint.
+type PostAccountsIdMintJSONBody struct {
+	Amount string `json:"amount"`
+}
+
 // PostAccountsRegisterJSONRequestBody defines body for PostAccountsRegister for application/json ContentType.
 type PostAccountsRegisterJSONRequestBody PostAccountsRegisterJSONBody
+
+// PostAccountsIdMintJSONRequestBody defines body for PostAccountsIdMint for application/json ContentType.
+type PostAccountsIdMintJSONRequestBody PostAccountsIdMintJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -29,6 +37,9 @@ type ServerInterface interface {
 
 	// (GET /accounts/{id}/balance)
 	GetAccountsIdBalance(w http.ResponseWriter, r *http.Request, id int)
+
+	// (POST /accounts/{id}/mint)
+	PostAccountsIdMint(w http.ResponseWriter, r *http.Request, id int)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -72,6 +83,32 @@ func (siw *ServerInterfaceWrapper) GetAccountsIdBalance(w http.ResponseWriter, r
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAccountsIdBalance(w, r, id)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// PostAccountsIdMint operation middleware
+func (siw *ServerInterfaceWrapper) PostAccountsIdMint(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id int
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAccountsIdMint(w, r, id)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -200,6 +237,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/accounts/{id}/balance", wrapper.GetAccountsIdBalance)
 	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/accounts/{id}/mint", wrapper.PostAccountsIdMint)
+	})
 
 	return r
 }
@@ -250,6 +290,26 @@ func (response GetAccountsIdBalance404Response) VisitGetAccountsIdBalanceRespons
 	return nil
 }
 
+type PostAccountsIdMintRequestObject struct {
+	Id   int `json:"id"`
+	Body *PostAccountsIdMintJSONRequestBody
+}
+
+type PostAccountsIdMintResponseObject interface {
+	VisitPostAccountsIdMintResponse(w http.ResponseWriter) error
+}
+
+type PostAccountsIdMint200JSONResponse struct {
+	TransactionId *int `json:"transactionId,omitempty"`
+}
+
+func (response PostAccountsIdMint200JSONResponse) VisitPostAccountsIdMintResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
@@ -258,6 +318,9 @@ type StrictServerInterface interface {
 
 	// (GET /accounts/{id}/balance)
 	GetAccountsIdBalance(ctx context.Context, request GetAccountsIdBalanceRequestObject) (GetAccountsIdBalanceResponseObject, error)
+
+	// (POST /accounts/{id}/mint)
+	PostAccountsIdMint(ctx context.Context, request PostAccountsIdMintRequestObject) (PostAccountsIdMintResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, args interface{}) (interface{}, error)
@@ -340,6 +403,39 @@ func (sh *strictHandler) GetAccountsIdBalance(w http.ResponseWriter, r *http.Req
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetAccountsIdBalanceResponseObject); ok {
 		if err := validResponse.VisitGetAccountsIdBalanceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("Unexpected response type: %T", response))
+	}
+}
+
+// PostAccountsIdMint operation middleware
+func (sh *strictHandler) PostAccountsIdMint(w http.ResponseWriter, r *http.Request, id int) {
+	var request PostAccountsIdMintRequestObject
+
+	request.Id = id
+
+	var body PostAccountsIdMintJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PostAccountsIdMint(ctx, request.(PostAccountsIdMintRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PostAccountsIdMint")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PostAccountsIdMintResponseObject); ok {
+		if err := validResponse.VisitPostAccountsIdMintResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

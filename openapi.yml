@@ -44,6 +44,36 @@ paths:
                 type: object
                 properties:
                   balance:
-                    type: string # balance is decimal
+                    type: string # decimal
         404:
           description: Not Found
+  /accounts/{id}/mint:
+    post:
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: string # decimal
+              required:
+                - amount
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactionId:
+                    type: integer
+                required:
+                  - name

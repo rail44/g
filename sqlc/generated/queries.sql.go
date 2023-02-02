@@ -11,34 +11,93 @@ import (
 )
 
 const getBalance = `-- name: GetBalance :one
-SELECT id, balance FROM balances WHERE id=$1 LIMIT 1
+SELECT account, balance FROM balances WHERE account=$1 LIMIT 1
 `
 
-func (q *Queries) GetBalance(ctx context.Context, id int64) (Balance, error) {
-	row := q.db.QueryRowContext(ctx, getBalance, id)
+func (q *Queries) GetBalance(ctx context.Context, account int64) (Balance, error) {
+	row := q.db.QueryRowContext(ctx, getBalance, account)
 	var i Balance
-	err := row.Scan(&i.ID, &i.Balance)
+	err := row.Scan(&i.Account, &i.Balance)
 	return i, err
 }
 
-const registerAccount = `-- name: RegisterAccount :one
-WITH ids AS (
-  INSERT INTO accounts (
-    name
-  ) VALUES (
-    $1
-  ) RETURNING id
-)
-INSERT INTO balances (
-  id, balance
-) SELECT
-  id, 0
-FROM ids
-RETURNING id
+const incrementBalance = `-- name: IncrementBalance :exec
+UPDATE balances SET balance = balance + $2 WHERE account=$1
 `
 
-func (q *Queries) RegisterAccount(ctx context.Context, name sql.NullString) (int64, error) {
-	row := q.db.QueryRowContext(ctx, registerAccount, name)
+type IncrementBalanceParams struct {
+	Account int64
+	Amount  string
+}
+
+func (q *Queries) IncrementBalance(ctx context.Context, arg IncrementBalanceParams) error {
+	_, err := q.db.ExecContext(ctx, incrementBalance, arg.Account, arg.Amount)
+	return err
+}
+
+const insertAccount = `-- name: InsertAccount :one
+INSERT INTO accounts (
+  name
+) VALUES (
+  $1
+) RETURNING id
+`
+
+func (q *Queries) InsertAccount(ctx context.Context, name sql.NullString) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertAccount, name)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertBalance = `-- name: InsertBalance :exec
+INSERT INTO balances (
+  account, balance
+) VALUES (
+  $1, 0
+)
+`
+
+func (q *Queries) InsertBalance(ctx context.Context, account int64) error {
+	_, err := q.db.ExecContext(ctx, insertBalance, account)
+	return err
+}
+
+const insertMint = `-- name: InsertMint :one
+INSERT INTO mints (
+  account, amount
+) VALUES (
+  $1, $2
+) RETURNING id
+`
+
+type InsertMintParams struct {
+	Account int64
+	Amount  string
+}
+
+func (q *Queries) InsertMint(ctx context.Context, arg InsertMintParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertMint, arg.Account, arg.Amount)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertTransaction = `-- name: InsertTransaction :one
+INSERT INTO transactions (
+  mint, transfer
+) VALUES (
+  $1, $2
+) RETURNING id
+`
+
+type InsertTransactionParams struct {
+	Mint     sql.NullInt64
+	Transfer sql.NullInt64
+}
+
+func (q *Queries) InsertTransaction(ctx context.Context, arg InsertTransactionParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertTransaction, arg.Mint, arg.Transfer)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
