@@ -30,23 +30,33 @@ type Server struct {
         queries *sqlc.Queries
 }
 
-func (server Server) GetAccountAccountIdBalance(ctx context.Context, req openapi.GetAccountAccountIdBalanceRequestObject) (openapi.GetAccountAccountIdBalanceResponseObject, error) {
-        account, err := server.queries.GetAccount(ctx, 1)
-        if err != nil {
-                fmt.Println(err)
+func (server Server) GetAccountsIdBalance(ctx context.Context, req openapi.GetAccountsIdBalanceRequestObject) (openapi.GetAccountsIdBalanceResponseObject, error) {
+        model, err := server.queries.GetBalance(ctx, int64(req.Id))
+
+        if err == sql.ErrNoRows {
+                res := openapi.GetAccountsIdBalance404Response {}
+                return res, nil
         }
-        fmt.Println(account)
-	balance := "100"
-	res := openapi.GetAccountAccountIdBalance200JSONResponse{
-		Balance: &balance,
+
+        if err != nil {
+                return nil, fmt.Errorf("Failed to query GetBalance: %w", err)
+        }
+
+	res := openapi.GetAccountsIdBalance200JSONResponse{
+		Balance: &model.Balance,
 	}
 	return res, nil
 }
 
-func (server Server) PostAccountRegister(ctx context.Context, req openapi.PostAccountRegisterRequestObject) (openapi.PostAccountRegisterResponseObject, error) {
-	accountId := 1
-	res := openapi.PostAccountRegister200JSONResponse{
-		AccountId: &accountId,
+func (server Server) PostAccountsRegister(ctx context.Context, req openapi.PostAccountsRegisterRequestObject) (openapi.PostAccountsRegisterResponseObject, error) {
+        int64Id, err := server.queries.RegisterAccount(ctx, sql.NullString{ String: req.Body.Name, Valid: true })
+        if err != nil {
+                return nil, fmt.Errorf("Failed to query RegisterAccount: %w", err)
+        }
+
+        id := int(int64Id)
+	res := openapi.PostAccountsRegister200JSONResponse{
+		AccountId: &id,
 	}
 	return res, nil
 }

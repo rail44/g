@@ -16,6 +16,11 @@ type Account struct {
 	Name       sql.NullString
 }
 
+type Balance struct {
+	ID      int64
+	Balance string
+}
+
 type Mint struct {
 	ID      int64
 	Amount  string

@@ -7,20 +7,39 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
-const getAccount = `-- name: GetAccount :one
-SELECT id, inserted_at, updated_at, name FROM accounts WHERE id=$1 LIMIT 1
+const getBalance = `-- name: GetBalance :one
+SELECT id, balance FROM balances WHERE id=$1 LIMIT 1
 `
 
-func (q *Queries) GetAccount(ctx context.Context, id int64) (Account, error) {
-	row := q.db.QueryRowContext(ctx, getAccount, id)
-	var i Account
-	err := row.Scan(
-		&i.ID,
-		&i.InsertedAt,
-		&i.UpdatedAt,
-		&i.Name,
-	)
+func (q *Queries) GetBalance(ctx context.Context, id int64) (Balance, error) {
+	row := q.db.QueryRowContext(ctx, getBalance, id)
+	var i Balance
+	err := row.Scan(&i.ID, &i.Balance)
 	return i, err
+}
+
+const registerAccount = `-- name: RegisterAccount :one
+WITH ids AS (
+  INSERT INTO accounts (
+    name
+  ) VALUES (
+    $1
+  ) RETURNING id
+)
+INSERT INTO balances (
+  id, balance
+) SELECT
+  id, 0
+FROM ids
+RETURNING id
+`
+
+func (q *Queries) RegisterAccount(ctx context.Context, name sql.NullString) (int64, error) {
+	row := q.db.QueryRowContext(ctx, registerAccount, name)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }

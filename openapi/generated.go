@@ -13,22 +13,22 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// PostAccountRegisterJSONBody defines parameters for PostAccountRegister.
-type PostAccountRegisterJSONBody struct {
+// PostAccountsRegisterJSONBody defines parameters for PostAccountsRegister.
+type PostAccountsRegisterJSONBody struct {
 	Name string `json:"name"`
 }
 
-// PostAccountRegisterJSONRequestBody defines body for PostAccountRegister for application/json ContentType.
-type PostAccountRegisterJSONRequestBody PostAccountRegisterJSONBody
+// PostAccountsRegisterJSONRequestBody defines body for PostAccountsRegister for application/json ContentType.
+type PostAccountsRegisterJSONRequestBody PostAccountsRegisterJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
-	// (POST /account/register)
-	PostAccountRegister(w http.ResponseWriter, r *http.Request)
+	// (POST /accounts/register)
+	PostAccountsRegister(w http.ResponseWriter, r *http.Request)
 
-	// (GET /account/{accountId}/balance)
-	GetAccountAccountIdBalance(w http.ResponseWriter, r *http.Request, accountId int)
+	// (GET /accounts/{id}/balance)
+	GetAccountsIdBalance(w http.ResponseWriter, r *http.Request, id int)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -40,12 +40,12 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
-// PostAccountRegister operation middleware
-func (siw *ServerInterfaceWrapper) PostAccountRegister(w http.ResponseWriter, r *http.Request) {
+// PostAccountsRegister operation middleware
+func (siw *ServerInterfaceWrapper) PostAccountsRegister(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PostAccountRegister(w, r)
+		siw.Handler.PostAccountsRegister(w, r)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -55,23 +55,23 @@ func (siw *ServerInterfaceWrapper) PostAccountRegister(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetAccountAccountIdBalance operation middleware
-func (siw *ServerInterfaceWrapper) GetAccountAccountIdBalance(w http.ResponseWriter, r *http.Request) {
+// GetAccountsIdBalance operation middleware
+func (siw *ServerInterfaceWrapper) GetAccountsIdBalance(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
 
-	// ------------- Path parameter "accountId" -------------
-	var accountId int
+	// ------------- Path parameter "id" -------------
+	var id int
 
-	err = runtime.BindStyledParameterWithLocation("simple", false, "accountId", runtime.ParamLocationPath, chi.URLParam(r, "accountId"), &accountId)
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
 	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "accountId", Err: err})
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
 		return
 	}
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAccountAccountIdBalance(w, r, accountId)
+		siw.Handler.GetAccountsIdBalance(w, r, id)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -195,61 +195,69 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/account/register", wrapper.PostAccountRegister)
+		r.Post(options.BaseURL+"/accounts/register", wrapper.PostAccountsRegister)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/account/{accountId}/balance", wrapper.GetAccountAccountIdBalance)
+		r.Get(options.BaseURL+"/accounts/{id}/balance", wrapper.GetAccountsIdBalance)
 	})
 
 	return r
 }
 
-type PostAccountRegisterRequestObject struct {
-	Body *PostAccountRegisterJSONRequestBody
+type PostAccountsRegisterRequestObject struct {
+	Body *PostAccountsRegisterJSONRequestBody
 }
 
-type PostAccountRegisterResponseObject interface {
-	VisitPostAccountRegisterResponse(w http.ResponseWriter) error
+type PostAccountsRegisterResponseObject interface {
+	VisitPostAccountsRegisterResponse(w http.ResponseWriter) error
 }
 
-type PostAccountRegister200JSONResponse struct {
+type PostAccountsRegister200JSONResponse struct {
 	AccountId *int `json:"accountId,omitempty"`
 }
 
-func (response PostAccountRegister200JSONResponse) VisitPostAccountRegisterResponse(w http.ResponseWriter) error {
+func (response PostAccountsRegister200JSONResponse) VisitPostAccountsRegisterResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetAccountAccountIdBalanceRequestObject struct {
-	AccountId int `json:"accountId"`
+type GetAccountsIdBalanceRequestObject struct {
+	Id int `json:"id"`
 }
 
-type GetAccountAccountIdBalanceResponseObject interface {
-	VisitGetAccountAccountIdBalanceResponse(w http.ResponseWriter) error
+type GetAccountsIdBalanceResponseObject interface {
+	VisitGetAccountsIdBalanceResponse(w http.ResponseWriter) error
 }
 
-type GetAccountAccountIdBalance200JSONResponse struct {
+type GetAccountsIdBalance200JSONResponse struct {
 	Balance *string `json:"balance,omitempty"`
 }
 
-func (response GetAccountAccountIdBalance200JSONResponse) VisitGetAccountAccountIdBalanceResponse(w http.ResponseWriter) error {
+func (response GetAccountsIdBalance200JSONResponse) VisitGetAccountsIdBalanceResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
+}
+
+type GetAccountsIdBalance404Response struct {
+}
+
+func (response GetAccountsIdBalance404Response) VisitGetAccountsIdBalanceResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
 }
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 
-	// (POST /account/register)
-	PostAccountRegister(ctx context.Context, request PostAccountRegisterRequestObject) (PostAccountRegisterResponseObject, error)
+	// (POST /accounts/register)
+	PostAccountsRegister(ctx context.Context, request PostAccountsRegisterRequestObject) (PostAccountsRegisterResponseObject, error)
 
-	// (GET /account/{accountId}/balance)
-	GetAccountAccountIdBalance(ctx context.Context, request GetAccountAccountIdBalanceRequestObject) (GetAccountAccountIdBalanceResponseObject, error)
+	// (GET /accounts/{id}/balance)
+	GetAccountsIdBalance(ctx context.Context, request GetAccountsIdBalanceRequestObject) (GetAccountsIdBalanceResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, args interface{}) (interface{}, error)
@@ -282,11 +290,11 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
-// PostAccountRegister operation middleware
-func (sh *strictHandler) PostAccountRegister(w http.ResponseWriter, r *http.Request) {
-	var request PostAccountRegisterRequestObject
+// PostAccountsRegister operation middleware
+func (sh *strictHandler) PostAccountsRegister(w http.ResponseWriter, r *http.Request) {
+	var request PostAccountsRegisterRequestObject
 
-	var body PostAccountRegisterJSONRequestBody
+	var body PostAccountsRegisterJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -294,18 +302,18 @@ func (sh *strictHandler) PostAccountRegister(w http.ResponseWriter, r *http.Requ
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PostAccountRegister(ctx, request.(PostAccountRegisterRequestObject))
+		return sh.ssi.PostAccountsRegister(ctx, request.(PostAccountsRegisterRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PostAccountRegister")
+		handler = middleware(handler, "PostAccountsRegister")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PostAccountRegisterResponseObject); ok {
-		if err := validResponse.VisitPostAccountRegisterResponse(w); err != nil {
+	} else if validResponse, ok := response.(PostAccountsRegisterResponseObject); ok {
+		if err := validResponse.VisitPostAccountsRegisterResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -313,25 +321,25 @@ func (sh *strictHandler) PostAccountRegister(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// GetAccountAccountIdBalance operation middleware
-func (sh *strictHandler) GetAccountAccountIdBalance(w http.ResponseWriter, r *http.Request, accountId int) {
-	var request GetAccountAccountIdBalanceRequestObject
+// GetAccountsIdBalance operation middleware
+func (sh *strictHandler) GetAccountsIdBalance(w http.ResponseWriter, r *http.Request, id int) {
+	var request GetAccountsIdBalanceRequestObject
 
-	request.AccountId = accountId
+	request.Id = id
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetAccountAccountIdBalance(ctx, request.(GetAccountAccountIdBalanceRequestObject))
+		return sh.ssi.GetAccountsIdBalance(ctx, request.(GetAccountsIdBalanceRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetAccountAccountIdBalance")
+		handler = middleware(handler, "GetAccountsIdBalance")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetAccountAccountIdBalanceResponseObject); ok {
-		if err := validResponse.VisitGetAccountAccountIdBalanceResponse(w); err != nil {
+	} else if validResponse, ok := response.(GetAccountsIdBalanceResponseObject); ok {
+		if err := validResponse.VisitGetAccountsIdBalanceResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

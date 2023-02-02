@@ -3,7 +3,7 @@ info:
   version: 0.1.0
   title: g
 paths:
-  /account/register:
+  /accounts/register:
     post:
       requestBody:
         content:
@@ -27,11 +27,11 @@ paths:
                     type: integer
                 required:
                   - name
-  /account/{accountId}/balance:
+  /accounts/{id}/balance:
     get:
       parameters:
         - in: path
-          name: accountId
+          name: id
           schema:
             type: integer
           required: true
@@ -45,3 +45,5 @@ paths:
                 properties:
                   balance:
                     type: string # balance is decimal
+        404:
+          description: Not Found
