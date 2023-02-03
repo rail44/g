@@ -81,3 +81,51 @@ g/
 細かいところとしては、起きうる例外のパターンに対してサブパッケージ内に独自errorを実装していたり、トランザクションを含む処理を楽に行うためのユーティリティの整備なども行っています。  
 今後これらのコンポーネントにパラメーターやルーティングを追加しようと考えたときに、どこにどのような修正をすれば良いかの見通しがある程度効く構成を目標に実装を行いました。
 
+## Demonstrations
+
+#### Register
+
+```bash
+$ curl -v --data '{"name": "hoge"}' http://localhost:3000/accounts
+
+*   Trying 127.0.0.1:3000...
+* Connected to localhost (127.0.0.1) port 3000 (#0)
+> POST /accounts HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/7.87.0
+> Accept: */*
+> Content-Length: 16
+> Content-Type: application/x-www-form-urlencoded
+> 
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Content-Type: application/json
+< Date: Fri, 03 Feb 2023 08:50:19 GMT
+< Content-Length: 16
+< 
+{"accountId":1}
+* Connection #0 to host localhost left intact
+```
+
+#### Mint
+
+```bash
+$ curl -v --data '{"amount": 100}' http://localhost:3000/accounts/1/mint
+*   Trying 127.0.0.1:3000...
+* Connected to localhost (127.0.0.1) port 3000 (#0)
+> POST /accounts/1/mint HTTP/1.1
+> Host: localhost:3000
+> User-Agent: curl/7.87.0
+> Accept: */*
+> Content-Length: 15
+> Content-Type: application/x-www-form-urlencoded
+> 
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Content-Type: application/json
+< Date: Fri, 03 Feb 2023 09:00:05 GMT
+< Content-Length: 20
+< 
+{"transactionId":1}
+* Connection #0 to host localhost left intact
+```
