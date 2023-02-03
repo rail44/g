@@ -3,13 +3,13 @@ package accounts
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/rail44/g/sqlc/generated"
 	"strconv"
-	"errors"
 )
 
-var ValidationError = errors.New("Validation Error");
+var ValidationError = errors.New("Validation Error")
 
 type Model struct {
 	db *sql.DB
@@ -62,7 +62,7 @@ func (model *Model) GetBalance(ctx context.Context, id int) (int, error) {
 
 func (model *Model) Register(ctx context.Context, name string) (int, error) {
 	if len(name) == 0 {
-    return 0, fmt.Errorf("name is not presented: %w", ValidationError)
+		return 0, fmt.Errorf("name is not presented: %w", ValidationError)
 	}
 
 	tx, err := model.db.Begin()
@@ -170,7 +170,7 @@ func (model *Model) Spend(ctx context.Context, accountId int, amount int) (int, 
 	err = model.HasEnough(ctx, accountId, amount)
 	if err != nil {
 		return 0, err
-  }
+	}
 
 	amountDecimal := strconv.Itoa(amount)
 	mintId, err := queries.InsertSpend(ctx, amountDecimal)
@@ -212,7 +212,7 @@ func (model *Model) Transfer(ctx context.Context, senderAccountId int, recipient
 	}
 
 	if amount <= 0 {
-    return 0, fmt.Errorf("amount should be positive value %d: %w", amount, ValidationError)
+		return 0, fmt.Errorf("amount should be positive value %d: %w", amount, ValidationError)
 	}
 
 	err = model.Exists(ctx, senderAccountId)
@@ -228,7 +228,7 @@ func (model *Model) Transfer(ctx context.Context, senderAccountId int, recipient
 	err = model.HasEnough(ctx, senderAccountId, amount)
 	if err != nil {
 		return 0, err
-  }
+	}
 
 	amountDecimal := strconv.Itoa(amount)
 	transferId, err := queries.InsertTransfer(ctx, sqlc.InsertTransferParams{

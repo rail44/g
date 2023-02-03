@@ -31,9 +31,11 @@ const (
 
 // Mint defines model for Mint.
 type Mint struct {
-	Amount     *int       `json:"amount,omitempty"`
-	InsertedAt *time.Time `json:"inserted_at,omitempty"`
-	Type       *MintType  `json:"type,omitempty"`
+	Account    int       `json:"account"`
+	Amount     int       `json:"amount"`
+	Id         string    `json:"id"`
+	InsertedAt time.Time `json:"inserted_at"`
+	Type       MintType  `json:"type"`
 }
 
 // MintType defines model for Mint.Type.
@@ -41,9 +43,11 @@ type MintType string
 
 // Spend defines model for Spend.
 type Spend struct {
-	Amount     *int       `json:"amount,omitempty"`
-	InsertedAt *time.Time `json:"inserted_at,omitempty"`
-	Type       *SpendType `json:"type,omitempty"`
+	Account    int       `json:"account"`
+	Amount     int       `json:"amount"`
+	Id         string    `json:"id"`
+	InsertedAt time.Time `json:"inserted_at"`
+	Type       SpendType `json:"type"`
 }
 
 // SpendType defines model for Spend.Type.
@@ -51,10 +55,12 @@ type SpendType string
 
 // Transfer defines model for Transfer.
 type Transfer struct {
-	Amount     *int          `json:"amount,omitempty"`
-	InsertedAt *time.Time    `json:"inserted_at,omitempty"`
-	Recipient  *int          `json:"recipient,omitempty"`
-	Type       *TransferType `json:"type,omitempty"`
+	Account    int          `json:"account"`
+	Amount     int          `json:"amount"`
+	Id         string       `json:"id"`
+	InsertedAt time.Time    `json:"inserted_at"`
+	Recipient  int          `json:"recipient"`
+	Type       TransferType `json:"type"`
 }
 
 // TransferType defines model for Transfer.Type.
@@ -426,16 +432,6 @@ func (response Register200JSONResponse) VisitRegisterResponse(w http.ResponseWri
 	return json.NewEncoder(w).Encode(response)
 }
 
-type Register400TextResponse string
-
-func (response Register400TextResponse) VisitRegisterResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(400)
-
-	_, err := w.Write([]byte(response))
-	return err
-}
-
 type BalanceRequestObject struct {
 	Id AccountId `json:"id"`
 }
@@ -445,7 +441,7 @@ type BalanceResponseObject interface {
 }
 
 type Balance200JSONResponse struct {
-	Balance *int `json:"balance,omitempty"`
+	Balance int `json:"balance"`
 }
 
 func (response Balance200JSONResponse) VisitBalanceResponse(w http.ResponseWriter) error {
@@ -453,14 +449,6 @@ func (response Balance200JSONResponse) VisitBalanceResponse(w http.ResponseWrite
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
-}
-
-type Balance404Response struct {
-}
-
-func (response Balance404Response) VisitBalanceResponse(w http.ResponseWriter) error {
-	w.WriteHeader(404)
-	return nil
 }
 
 type MintRequestObject struct {
@@ -473,7 +461,7 @@ type MintResponseObject interface {
 }
 
 type Mint200JSONResponse struct {
-	TransactionId *int `json:"transactionId,omitempty"`
+	TransactionId int `json:"transactionId"`
 }
 
 func (response Mint200JSONResponse) VisitMintResponse(w http.ResponseWriter) error {
@@ -481,24 +469,6 @@ func (response Mint200JSONResponse) VisitMintResponse(w http.ResponseWriter) err
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
-}
-
-type Mint400TextResponse string
-
-func (response Mint400TextResponse) VisitMintResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(400)
-
-	_, err := w.Write([]byte(response))
-	return err
-}
-
-type Mint404Response struct {
-}
-
-func (response Mint404Response) VisitMintResponse(w http.ResponseWriter) error {
-	w.WriteHeader(404)
-	return nil
 }
 
 type SpendRequestObject struct {
@@ -511,7 +481,7 @@ type SpendResponseObject interface {
 }
 
 type Spend200JSONResponse struct {
-	TransactionId *int `json:"transactionId,omitempty"`
+	TransactionId int `json:"transactionId"`
 }
 
 func (response Spend200JSONResponse) VisitSpendResponse(w http.ResponseWriter) error {
@@ -519,24 +489,6 @@ func (response Spend200JSONResponse) VisitSpendResponse(w http.ResponseWriter) e
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
-}
-
-type Spend400TextResponse string
-
-func (response Spend400TextResponse) VisitSpendResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(400)
-
-	_, err := w.Write([]byte(response))
-	return err
-}
-
-type Spend404Response struct {
-}
-
-func (response Spend404Response) VisitSpendResponse(w http.ResponseWriter) error {
-	w.WriteHeader(404)
-	return nil
 }
 
 type TransactionsRequestObject struct {
@@ -556,14 +508,6 @@ func (response Transactions200JSONResponse) VisitTransactionsResponse(w http.Res
 	return json.NewEncoder(w).Encode(response)
 }
 
-type Transactions404Response struct {
-}
-
-func (response Transactions404Response) VisitTransactionsResponse(w http.ResponseWriter) error {
-	w.WriteHeader(404)
-	return nil
-}
-
 type TransferRequestObject struct {
 	Id   AccountId `json:"id"`
 	Body *TransferJSONRequestBody
@@ -574,7 +518,7 @@ type TransferResponseObject interface {
 }
 
 type Transfer200JSONResponse struct {
-	TransactionId *int `json:"transactionId,omitempty"`
+	TransactionId int `json:"transactionId"`
 }
 
 func (response Transfer200JSONResponse) VisitTransferResponse(w http.ResponseWriter) error {
@@ -582,24 +526,6 @@ func (response Transfer200JSONResponse) VisitTransferResponse(w http.ResponseWri
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
-}
-
-type Transfer400TextResponse string
-
-func (response Transfer400TextResponse) VisitTransferResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(400)
-
-	_, err := w.Write([]byte(response))
-	return err
-}
-
-type Transfer404Response struct {
-}
-
-func (response Transfer404Response) VisitTransferResponse(w http.ResponseWriter) error {
-	w.WriteHeader(404)
-	return nil
 }
 
 // StrictServerInterface represents all server handlers.

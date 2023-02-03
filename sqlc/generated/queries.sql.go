@@ -54,7 +54,8 @@ func (q *Queries) GetBalance(ctx context.Context, account int64) (string, error)
 
 const getTransactions = `-- name: GetTransactions :many
 SELECT
-  inserted_at,
+  transactions.account AS account_id,
+  transactions.inserted_at AS inserted_at,
 
   mints.id AS mint_id,
   mints.amount AS mint_amount,
@@ -69,10 +70,11 @@ FROM transactions
 LEFT OUTER JOIN mints ON transactions.mint=mints.id
 LEFT OUTER JOIN spends ON transactions.spend=spends.id
 LEFT OUTER JOIN transfers ON transactions.transfer=transfers.id
-WHERE account=$1 ORDER BY inserted_at ASC
+WHERE transactions.account=$1 OR transfers.recipient=$1 ORDER BY transactions.inserted_at ASC
 `
 
 type GetTransactionsRow struct {
+	AccountID         int64
 	InsertedAt        time.Time
 	MintID            sql.NullInt64
 	MintAmount        sql.NullString
@@ -93,6 +95,7 @@ func (q *Queries) GetTransactions(ctx context.Context, account int64) ([]GetTran
 	for rows.Next() {
 		var i GetTransactionsRow
 		if err := rows.Scan(
+			&i.AccountID,
 			&i.InsertedAt,
 			&i.MintID,
 			&i.MintAmount,

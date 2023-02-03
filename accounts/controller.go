@@ -10,24 +10,23 @@ import (
 
 func NewController(db *sql.DB) http.Handler {
 	model := Model{db: db}
-  controller := Controller{ db: db, model: &model }
+	controller := Controller{db: db, model: &model}
 
-  options := StrictHTTPServerOptions {
+	options := StrictHTTPServerOptions{
 		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		},
 		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-      if errors.Is(err, ValidationError) {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-      }
+			if errors.Is(err, ValidationError) {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
 
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		},
 	}
 
-	return HandlerWithOptions(NewStrictHandlerWithOptions(controller, nil, options), ChiServerOptions{
-  })
+	return HandlerWithOptions(NewStrictHandlerWithOptions(controller, nil, options), ChiServerOptions{})
 }
 
 type Controller struct {
@@ -48,7 +47,7 @@ func (controller Controller) Balance(ctx context.Context, req BalanceRequestObje
 	}
 
 	res := Balance200JSONResponse{
-		Balance: &balance,
+		Balance: balance,
 	}
 	return res, nil
 }
@@ -91,33 +90,33 @@ func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (M
 
 	txIdInt := int(txId)
 	res := Mint200JSONResponse{
-		TransactionId: &txIdInt,
+		TransactionId: txIdInt,
 	}
 
 	return res, nil
 }
 
 func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) (SpendResponseObject, error) {
-  txId, err := controller.model.Spend(ctx, req.Id, req.Body.Amount)
+	txId, err := controller.model.Spend(ctx, req.Id, req.Body.Amount)
 	if err != nil {
 		return nil, err
 	}
 
 	res := Spend200JSONResponse{
-		TransactionId: &txId,
+		TransactionId: txId,
 	}
 
 	return res, nil
 }
 
 func (controller Controller) Transfer(ctx context.Context, req TransferRequestObject) (TransferResponseObject, error) {
-  txId, err := controller.model.Transfer(ctx, req.Id, req.Body.To, req.Body.Amount)
+	txId, err := controller.model.Transfer(ctx, req.Id, req.Body.To, req.Body.Amount)
 	if err != nil {
 		return nil, err
 	}
 
 	res := Transfer200JSONResponse{
-		TransactionId: &txId,
+		TransactionId: txId,
 	}
 
 	return res, nil
