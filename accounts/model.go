@@ -173,9 +173,9 @@ func (model *Model) Spend(ctx context.Context, accountId int, amount int) (int, 
   }
 
 	amountDecimal := strconv.Itoa(amount)
-	mintId, err := queries.InsertMint(ctx, amountDecimal)
+	mintId, err := queries.InsertSpend(ctx, amountDecimal)
 	if err != nil {
-		return 0, fmt.Errorf("query InsertMint: %w", err)
+		return 0, fmt.Errorf("query InsertSpend: %w", err)
 	}
 
 	accountIdInt64 := int64(accountId)
@@ -193,6 +193,74 @@ func (model *Model) Spend(ctx context.Context, accountId int, amount int) (int, 
 	})
 	if err != nil {
 		return 0, fmt.Errorf("query DecrementBalance: %w", err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return 0, fmt.Errorf("commit: %w", err)
+	}
+
+	return int(txId), nil
+}
+
+func (model *Model) Transfer(ctx context.Context, senderAccountId int, recipientAccountId int, amount int) (int, error) {
+	tx, err := model.db.Begin()
+	defer tx.Rollback()
+	queries := sqlc.New(tx)
+	if err != nil {
+		return 0, fmt.Errorf("begin transaction: %w", err)
+	}
+
+	if amount <= 0 {
+    return 0, fmt.Errorf("amount should be positive value %d: %w", amount, ValidationError)
+	}
+
+	err = model.Exists(ctx, senderAccountId)
+	if err != nil {
+		return 0, err
+	}
+
+	err = model.Exists(ctx, recipientAccountId)
+	if err != nil {
+		return 0, err
+	}
+
+	err = model.HasEnough(ctx, senderAccountId, amount)
+	if err != nil {
+		return 0, err
+  }
+
+	amountDecimal := strconv.Itoa(amount)
+	transferId, err := queries.InsertTransfer(ctx, sqlc.InsertTransferParams{
+		Recipient: int64(recipientAccountId),
+		Amount:    amountDecimal,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("query InsertTransfer: %w", err)
+	}
+
+	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
+		Account:  int64(senderAccountId),
+		Transfer: sql.NullInt64{Int64: transferId, Valid: true},
+	})
+	if err != nil {
+		return 0, fmt.Errorf("query InsertTransaction: %w", err)
+	}
+
+	err = queries.DecrementBalance(ctx, sqlc.DecrementBalanceParams{
+		Account: int64(senderAccountId),
+		Amount:  amountDecimal,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("query DecrementBalance: %w", err)
+	}
+
+	err = queries.IncrementBalance(ctx, sqlc.IncrementBalanceParams{
+		Account: int64(recipientAccountId),
+		Amount:  amountDecimal,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("query IncrementBalance: %w", err)
 	}
 
 	err = tx.Commit()
