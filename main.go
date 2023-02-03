@@ -19,7 +19,7 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-	accountsCotroller := accounts.NewController(db)
+	accountsCotroller := accounts.NewController(accounts.NewModel(db))
 	r.Mount("/accounts", accountsCotroller)
 
 	log.Print("start listening")

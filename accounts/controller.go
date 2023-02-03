@@ -3,30 +3,36 @@ package accounts
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"database/sql"
 )
 
-func NewController(db *sql.DB) http.Handler {
-	model := Model{db: db}
-	controller := Controller{db: db, model: &model}
-
-	options := StrictHTTPServerOptions{
-		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+var ValidationError = errors.New("Validation Error")
+var ServerOptions = StrictHTTPServerOptions{
+	RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	},
+	ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+		if errors.Is(err, ValidationError) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
-		},
-		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-			if errors.Is(err, ValidationError) {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+			return
+		}
 
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		},
-	}
+		if errors.Is(err, DomainError) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
-	return HandlerWithOptions(NewStrictHandlerWithOptions(controller, nil, options), ChiServerOptions{})
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	},
+}
+
+func NewController(model *Model) http.Handler {
+	controller := Controller{model: model}
+
+	return HandlerWithOptions(NewStrictHandlerWithOptions(controller, nil, ServerOptions), ChiServerOptions{})
 }
 
 type Controller struct {
@@ -41,7 +47,6 @@ func (controller Controller) Balance(ctx context.Context, req BalanceRequestObje
 	}
 
 	balance, err := controller.model.GetBalance(ctx, req.Id)
-
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +64,6 @@ func (controller Controller) Transactions(ctx context.Context, req TransactionsR
 	}
 
 	transactions, err := controller.model.GetTransactions(ctx, req.Id)
-
 	if err != nil {
 		return nil, err
 	}
@@ -71,14 +75,18 @@ func (controller Controller) Transactions(ctx context.Context, req TransactionsR
 }
 
 func (controller Controller) Register(ctx context.Context, req RegisterRequestObject) (RegisterResponseObject, error) {
+	if len(req.Body.Name) == 0 {
+		return nil, fmt.Errorf("name is not presented: %w", ValidationError)
+	}
+
 	id, err := controller.model.Register(ctx, req.Body.Name)
 	if err != nil {
 		return nil, err
 	}
+
 	res := Register200JSONResponse{
 		AccountId: &id,
 	}
-
 	return res, nil
 }
 
@@ -88,11 +96,9 @@ func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (M
 		return nil, err
 	}
 
-	txIdInt := int(txId)
 	res := Mint200JSONResponse{
-		TransactionId: txIdInt,
+		TransactionId: int(txId),
 	}
-
 	return res, nil
 }
 
@@ -105,7 +111,6 @@ func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) 
 	res := Spend200JSONResponse{
 		TransactionId: txId,
 	}
-
 	return res, nil
 }
 
@@ -118,6 +123,5 @@ func (controller Controller) Transfer(ctx context.Context, req TransferRequestOb
 	res := Transfer200JSONResponse{
 		TransactionId: txId,
 	}
-
 	return res, nil
 }
