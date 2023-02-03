@@ -33,7 +33,7 @@ func (controller Controller) Balance(ctx context.Context, req BalanceRequestObje
   }
 
 	if err != nil {
-		return nil, fmt.Errorf("parse balance as decimal: %w", err)
+		return nil, fmt.Errorf("GetBalance: %w", err)
 	}
 
 	res := Balance200JSONResponse{
@@ -124,54 +124,23 @@ func (controller Controller) Register(ctx context.Context, req RegisterRequestOb
 }
 
 func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (MintResponseObject, error) {
-	tx, err := controller.db.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	queries := sqlc.New(tx)
-
 	if req.Body.Amount <= 0 {
 		res := Mint400TextResponse("amount should be positive value")
 		return res, nil
 	}
-	amount := strconv.Itoa(req.Body.Amount)
 
-	accountId := int64(req.Id)
-	_, err = queries.GetAccount(ctx, accountId)
-	if err == sql.ErrNoRows {
+  txId, err := controller.model.Mint(ctx, req.Id, req.Body.Amount)
+  if err == sql.ErrNoRows {
 		var res Mint404Response
-		return res, nil
-	}
-
-	mintId, err := queries.InsertMint(ctx, amount)
-	if err != nil {
-		return nil, fmt.Errorf("query InsertMint: %w", err)
-	}
-
-	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
-		Account: accountId,
-		Mint:    sql.NullInt64{Int64: mintId, Valid: true},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("query InsertTransaction: %w", err)
-	}
-
-	err = queries.IncrementBalance(ctx, sqlc.IncrementBalanceParams{
-		Account: accountId,
-		Amount:  amount,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("query IncrementBalance: %w", err)
-	}
+    return res, nil
+  }
 
 	txIdInt := int(txId)
 	res := Mint200JSONResponse{
 		TransactionId: &txIdInt,
 	}
 
-	return res, tx.Commit()
+	return res, nil
 }
 
 func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) (SpendResponseObject, error) {
