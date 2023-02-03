@@ -35,7 +35,7 @@ func (controller Controller) Balance(ctx context.Context, req BalanceRequestObje
 	balance, err := controller.model.GetBalance(ctx, req.Id)
 
 	if err != nil {
-		return nil, fmt.Errorf("GetBalance: %w", err)
+		return nil, err
 	}
 
 	res := Balance200JSONResponse{
@@ -58,7 +58,7 @@ func (controller Controller) Transactions(ctx context.Context, req TransactionsR
 	transactions, err := controller.model.GetTransactions(ctx, req.Id)
 
 	if err != nil {
-		return nil, fmt.Errorf("GetBalance: %w", err)
+		return nil, err
 	}
 
 	res := Transactions200JSONResponse(
@@ -76,7 +76,7 @@ func (controller Controller) Register(ctx context.Context, req RegisterRequestOb
 
 	id, err := controller.model.Register(ctx, name)
 	if err != nil {
-		return nil, fmt.Errorf("Register: %w", err)
+		return nil, err
 	}
 	res := Register200JSONResponse{
 		AccountId: &id,
@@ -97,9 +97,8 @@ func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (M
 	}
 
 	txId, err := controller.model.Mint(ctx, req.Id, req.Body.Amount)
-	if err == sql.ErrNoRows {
-		var res Mint404Response
-		return res, nil
+	if err != nil {
+		return nil, err
 	}
 
 	txIdInt := int(txId)
@@ -121,28 +120,9 @@ func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) 
 		return res, nil
 	}
 
-	tx, err := controller.db.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	queries := sqlc.New(tx)
-
-	if req.Body.Amount <= 0 {
-		res := Spend400TextResponse("amount should be positive value")
-		return res, nil
-	}
-	amount := strconv.Itoa(req.Body.Amount)
-
 	balance, err := controller.model.GetBalance(ctx, req.Id)
-	if err == sql.ErrNoRows {
-		var res Spend404Response
-		return res, nil
-	}
-
 	if err != nil {
-		return nil, fmt.Errorf("getBalance: %w", err)
+		return nil, err
 	}
 
 	if req.Body.Amount > balance {
@@ -151,34 +131,16 @@ func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) 
 		return res, nil
 	}
 
-	spendId, err := queries.InsertSpend(ctx, amount)
-	if err != nil {
-		return nil, fmt.Errorf("query InsertSpend: %w", err)
-	}
-
-	accountId := int64(req.Id)
-	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
-		Account: accountId,
-		Spend:   sql.NullInt64{Int64: spendId, Valid: true},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("query InsertTransaction: %w", err)
-	}
-
-	err = queries.DecrementBalance(ctx, sqlc.DecrementBalanceParams{
-		Account: accountId,
-		Amount:  amount,
-	})
 	if err != nil {
 		return nil, fmt.Errorf("query DecrementBalance: %w", err)
 	}
 
-	txIdInt := int(txId)
+  txId, err := controller.model.Spend(ctx, req.Id, req.Body.Amount)
 	res := Spend200JSONResponse{
-		TransactionId: &txIdInt,
+		TransactionId: &txId,
 	}
 
-	return res, tx.Commit()
+	return res, nil
 }
 
 func (controller Controller) Transfer(ctx context.Context, req TransferRequestObject) (TransferResponseObject, error) {
@@ -219,13 +181,9 @@ func (controller Controller) Transfer(ctx context.Context, req TransferRequestOb
 
 	accountId := int64(req.Id)
 	balance, err := controller.model.GetBalance(ctx, req.Id)
-	if err == sql.ErrNoRows {
-		var res Transfer404Response
-		return res, nil
-	}
 
 	if err != nil {
-		return nil, fmt.Errorf("getBalance: %w", err)
+		return nil, fmt.Errorf("GetBalance: %w", err)
 	}
 
 	if req.Body.Amount > balance {

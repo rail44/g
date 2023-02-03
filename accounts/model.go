@@ -108,40 +108,6 @@ func (model *Model) Mint(ctx context.Context, accountId int, amount int) (int, e
 	return int(txId), nil
 }
 
-func mapToSubtype(tx sqlc.GetTransactionsRow) (interface{}, error) {
-	if tx.MintID.Valid {
-		amount, err := strconv.Atoi(tx.MintAmount.String)
-		if err != nil {
-			return nil, fmt.Errorf("parse amount as decimal: %w", err)
-		}
-
-		_type := MintTypeMint
-		return Mint{Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type}, nil
-	}
-
-	if tx.SpendID.Valid {
-		amount, err := strconv.Atoi(tx.SpendAmount.String)
-		if err != nil {
-			return nil, fmt.Errorf("parse amount as decimal: %w", err)
-		}
-
-		_type := SpendTypeSpend
-		return Spend{Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type}, nil
-	}
-
-	if tx.TransferID.Valid {
-		amount, err := strconv.Atoi(tx.TransferAmount.String)
-		if err != nil {
-			return nil, fmt.Errorf("parse amount as decimal: %w", err)
-		}
-
-		_type := TransferTypeTransfer
-		recipient := int(tx.TransferRecipient.Int64)
-		return Transfer{Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type, Recipient: &recipient}, nil
-	}
-	return nil, fmt.Errorf("failed to determine tx type")
-}
-
 func (model *Model) GetTransactions(ctx context.Context, accountId int) ([]interface{}, error) {
 	queries := sqlc.New(model.db)
 	transactions, err := queries.GetTransactions(ctx, int64(accountId))
@@ -160,4 +126,43 @@ func (model *Model) GetTransactions(ctx context.Context, accountId int) ([]inter
 	}
 
 	return result, nil
+}
+
+func (model *Model) Spend(ctx context.Context, accountId int, amount int) (int, error) {
+	tx, err := model.db.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+	queries := sqlc.New(tx)
+
+	amountDecimal := strconv.Itoa(amount)
+	mintId, err := queries.InsertMint(ctx, amountDecimal)
+	if err != nil {
+		return 0, fmt.Errorf("query InsertMint: %w", err)
+	}
+
+	accountIdInt64 := int64(accountId)
+	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
+		Account: accountIdInt64,
+		Mint:    sql.NullInt64{Int64: mintId, Valid: true},
+	})
+	if err != nil {
+		return 0, fmt.Errorf("query InsertTransaction: %w", err)
+	}
+
+	err = queries.DecrementBalance(ctx, sqlc.DecrementBalanceParams{
+		Account: accountIdInt64,
+		Amount:  strconv.Itoa(amount),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("query DecrementBalance: %w", err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return 0, fmt.Errorf("commit: %w", err)
+	}
+
+	return int(txId), nil
 }
