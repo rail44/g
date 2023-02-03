@@ -43,18 +43,17 @@ func (controller Controller) Balance(ctx context.Context, req BalanceRequestObje
 }
 
 func (controller Controller) Transactions(ctx context.Context, req TransactionsRequestObject) (TransactionsResponseObject, error) {
+  exists, err :=  controller.model.Exists(ctx, req.Id)
+  if err != nil {
+		return nil, err
+	}
+
+  if !exists {
+    var res Transactions404Response
+    return res, nil
+  }
+
 	queries := sqlc.New(controller.db)
-
-	_, err := queries.GetAccount(ctx, int64(req.Id))
-	if err == sql.ErrNoRows {
-		var res Transactions404Response
-		return res, nil
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("query GetAccount: %w", err)
-	}
-
 	transactions, err := queries.GetTransactions(ctx, int64(req.Id))
 	if err != nil {
 		return nil, fmt.Errorf("query GetTransactions: %w", err)
@@ -124,10 +123,15 @@ func (controller Controller) Register(ctx context.Context, req RegisterRequestOb
 }
 
 func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (MintResponseObject, error) {
-	if req.Body.Amount <= 0 {
-		res := Mint400TextResponse("amount should be positive value")
-		return res, nil
+  exists, err :=  controller.model.Exists(ctx, req.Id)
+  if err != nil {
+		return nil, err
 	}
+
+  if !exists {
+    var res Mint404Response
+    return res, nil
+  }
 
   txId, err := controller.model.Mint(ctx, req.Id, req.Body.Amount)
   if err == sql.ErrNoRows {
@@ -144,6 +148,16 @@ func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (M
 }
 
 func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) (SpendResponseObject, error) {
+  exists, err :=  controller.model.Exists(ctx, req.Id)
+  if err != nil {
+		return nil, err
+	}
+
+  if !exists {
+    var res Spend404Response
+    return res, nil
+  }
+
 	tx, err := controller.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
@@ -205,6 +219,27 @@ func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) 
 }
 
 func (controller Controller) Transfer(ctx context.Context, req TransferRequestObject) (TransferResponseObject, error) {
+  exists, err :=  controller.model.Exists(ctx, req.Id)
+  if err != nil {
+		return nil, err
+	}
+
+  if !exists {
+    var res Transfer404Response
+    return res, nil
+  }
+
+  exists, err =  controller.model.Exists(ctx, req.Body.To)
+  if err != nil {
+		return nil, err
+	}
+
+  if !exists {
+		msg := fmt.Sprintf("recipient was not found by id %d", req.Body.To)
+		res := Transfer400TextResponse(msg)
+		return res, nil
+	}
+
 	tx, err := controller.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
@@ -235,15 +270,7 @@ func (controller Controller) Transfer(ctx context.Context, req TransferRequestOb
 		res := Transfer400TextResponse(msg)
 		return res, nil
 	}
-
 	recipientId := int64(req.Body.To)
-	_, err = queries.GetAccount(ctx, recipientId)
-	if err == sql.ErrNoRows {
-		msg := fmt.Sprintf("recipient was not found by id %d", recipientId)
-		res := Transfer400TextResponse(msg)
-		return res, nil
-	}
-
 	transferId, err := queries.InsertTransfer(ctx, sqlc.InsertTransferParams{
 		Recipient: recipientId,
 		Amount:    amount,

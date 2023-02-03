@@ -12,6 +12,22 @@ type Model struct {
 	db *sql.DB
 }
 
+func (model *Model) Exists(ctx context.Context, id int) (bool, error) {
+	queries := sqlc.New(model.db)
+
+	_, err := queries.GetAccount(ctx, int64(id))
+
+  if err == sql.ErrNoRows {
+    return false, nil;
+  }
+
+	if err != nil {
+    return false, fmt.Errorf("Exists: %w", err);
+	}
+
+  return true, nil
+}
+
 func (model *Model) GetBalance(ctx context.Context, id int) (int, error) {
 	queries := sqlc.New(model.db)
 
@@ -62,13 +78,7 @@ func (model *Model) Mint(ctx context.Context, accountId int, amount int) (int, e
 	queries := sqlc.New(tx)
 
 	amountDecimal := strconv.Itoa(amount)
-
-	_, err = queries.GetAccount(ctx, int64(accountId))
-	if err != nil {
-		return 0, fmt.Errorf("query GetAccount: %w", err)
-	}
-
-	mintId, err := queries.InsertMint(ctx, amountDecimal)
+  mintId, err := queries.InsertMint(ctx, amountDecimal)
 	if err != nil {
 		return 0, fmt.Errorf("query InsertMint: %w", err)
 	}
