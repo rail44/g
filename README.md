@@ -122,15 +122,13 @@ $ curl http://localhost:3000/accounts/1/balance
 #### Transfer
 
 ```bash
-$ curl --data '{"amount": 50}' http://localhost:3000/accounts/1/spend
-{"transactionId":2}
 $ curl http://localhost:3000/accounts/1/balance
 {"balance":50}
 $ curl http://localhost:3000/accounts/2/balance
 {"balance":0}
 
 $ curl --data '{"amount": 20, "recipient": 2}' http://localhost:3000/accounts/1/transfer
-{"transactionId":2}
+{"transactionId":3}
 $ curl http://localhost:3000/accounts/1/balance
 {"balance":30}
 $ curl http://localhost:3000/accounts/2/balance
@@ -142,5 +140,10 @@ $ curl http://localhost:3000/accounts/2/balance
 
 ```bash
 $ curl http://localhost:3000/accounts/1/transactions
-{"balance":20}
+[{"account":1,"amount":100,"id":1,"inserted_at":"2023-02-03T09:19:28.369151Z","type":"mint"},{"account":
+1,"amount":50,"id":2,"inserted_at":"2023-02-03T09:19:38.552711Z","type":"spend"},{"account":1,"amount":2
+0,"id":3,"inserted_at":"2023-02-03T09:20:12.201018Z","recipient":2,"type":"transfer"}]
+
+$ curl http://localhost:3000/accounts/2/transactions
+[{"account":1,"amount":20,"id":3,"inserted_at":"2023-02-03T09:20:12.201018Z","recipient":2,"type":"trans
 ```
