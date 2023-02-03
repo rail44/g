@@ -14,7 +14,12 @@ func mapToSubtype(entity sqlc.GetTransactionsRow) (interface{}, error) {
 			return nil, fmt.Errorf("parse amount as decimal: %w", err)
 		}
 
-		return Mint{Account: accountId, Amount: amount, InsertedAt: entity.InsertedAt, Type: MintTypeMint}, nil
+		return Mint{
+			Account:    accountId,
+			Amount:     amount,
+			InsertedAt: entity.InsertedAt,
+			Type:       MintTypeMint,
+		}, nil
 	}
 
 	if entity.SpendID.Valid {
@@ -23,7 +28,12 @@ func mapToSubtype(entity sqlc.GetTransactionsRow) (interface{}, error) {
 			return nil, fmt.Errorf("parse amount as decimal: %w", err)
 		}
 
-		return Spend{Account: accountId, Amount: amount, InsertedAt: entity.InsertedAt, Type: SpendTypeSpend}, nil
+		return Spend{
+			Account:    accountId,
+			Amount:     amount,
+			InsertedAt: entity.InsertedAt,
+			Type:       SpendTypeSpend,
+		}, nil
 	}
 
 	if entity.TransferID.Valid {
@@ -32,7 +42,13 @@ func mapToSubtype(entity sqlc.GetTransactionsRow) (interface{}, error) {
 			return nil, fmt.Errorf("parse amount as decimal: %w", err)
 		}
 
-		return Transfer{Account: accountId, Amount: amount, InsertedAt: entity.InsertedAt, Type: TransferTypeTransfer, Recipient: int(entity.TransferRecipient.Int64)}, nil
+		return Transfer{
+			Account:    accountId,
+			Amount:     amount,
+			InsertedAt: entity.InsertedAt,
+			Type:       TransferTypeTransfer,
+			Recipient:  int(entity.TransferRecipient.Int64),
+		}, nil
 	}
 	return nil, fmt.Errorf("failed to determine entity type")
 }
