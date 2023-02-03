@@ -23,6 +23,8 @@ func WithTransaction[T interface{}](db *sql.DB, f func(tx *sql.Tx) (T, error)) (
 	if err != nil {
 		return v, fmt.Errorf("begining transaction: %w", err)
 	}
+
+	// Commit()まで到達せずにスコープを抜けた場合はRollback
 	defer tx.Rollback()
 
 	v, err = f(tx)
@@ -38,6 +40,7 @@ func WithTransaction[T interface{}](db *sql.DB, f func(tx *sql.Tx) (T, error)) (
 	return v, nil
 }
 
+// sqlcで生成したクエリを発行するためのドメインモデル
 // QueryとCommandに分けるのもありかもしれないです
 // (Commandについてはinstantiate毎にトランザクションを発行してしまうと見通しがよくなるかもしれない
 type Model struct {

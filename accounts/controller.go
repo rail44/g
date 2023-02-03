@@ -10,6 +10,8 @@ import (
 )
 
 var ValidationError = errors.New("Validation Error")
+
+// 各RouteがErrorをreturnした場合に、その属性によってHTTPレスポンスを分岐させるためのカスタムハンドラ
 var ServerOptions = StrictHTTPServerOptions{
 	RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -36,8 +38,7 @@ var ServerOptions = StrictHTTPServerOptions{
 
 func NewController(model *Model) http.Handler {
 	controller := Controller{model: model}
-
-	return HandlerWithOptions(NewStrictHandlerWithOptions(controller, nil, ServerOptions), ChiServerOptions{})
+	return Handler(NewStrictHandlerWithOptions(controller, nil, ServerOptions))
 }
 
 type Controller struct {

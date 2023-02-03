@@ -1,14 +1,25 @@
-POSTGRES_PASSWORD := password
-POSTGRES_PORT := 5432
-POSTGRES_DB := g
+PORT := 3000
+PG_HOST := localhost
+PG_PORT := 5432
+PG_USER := postgres
+PG_PASS := password
+PG_DB := g
 
-db/launch:
-	docker run --rm -p $(POSTGRES_PORT):$(POSTGRES_PORT) -e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) -e POSTGRES_DB=$(POSTGRES_DB) postgres
+g/run:
+	@go run . -port=$(PORT) -dbuser=$(PG_USER) -dbpass=$(PG_PASS) -dbhost=$(PG_HOST) -dbport=$(PG_PORT) -dbname=$(PG_DB)
 
-db/schema:
-	psql -f sqlc/schema.sql postgresql://postgres:$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
+db/up:
+	docker run --rm -p $(PG_PORT):$(PG_PORT) -e PG_PASS=$(PG_PASS) -e POSTGRES_DB=$(PG_DB) -d postgres
+
+db/schema db/reset:
+	psql -f sqlc/schema.sql postgresql://$(PG_USER):$(PG_PASS)@$(PG_HOST):$(PG_PORT)/$(PG_DB)
 
 openapi/generate: accounts/openapi.gen.go
-
 accounts/openapi.gen.go: accounts/openapi.yml
 	oapi-codegen -package accounts -generate types,chi-server,strict-server $< > $@
+
+sqlc/generate:
+	sqlc generate
+
+fmt:
+	go fmt ./...

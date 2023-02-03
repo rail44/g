@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,8 +13,37 @@ import (
 	"github.com/rail44/g/accounts"
 )
 
+type DBConfig struct {
+	User *string
+	Pass *string
+	Host *string
+	Port *int
+	Name *string
+}
+
+func (config DBConfig) postgresUri() string {
+	return fmt.Sprintf(
+		"postgresql://%s:%s@%s:%d/%s?sslmode=disable",
+		*config.User,
+		*config.Pass,
+		*config.Host,
+		*config.Port,
+		*config.Name,
+	)
+}
+
 func main() {
-	db, err := sql.Open("postgres", "user=postgres dbname=g password=password host=localhost sslmode=disable")
+	port := flag.Int("port", 0, "Port for g daemon")
+	dbConfig := DBConfig{
+		Host: flag.String("dbhost", "", "Hostname for postgresql"),
+		Port: flag.Int("dbport", 0, "Port number for postgresql"),
+		Name: flag.String("dbname", "", "Database name for postgresql"),
+		User: flag.String("dbuser", "", "Database name for postgresql"),
+		Pass: flag.String("dbpass", "", "Password for postgresql"),
+	}
+	flag.Parse()
+
+	db, err := sql.Open("postgres", dbConfig.postgresUri())
 	if err != nil {
 		log.Fatal(fmt.Sprintf("open postgres: %w", err))
 	}
@@ -22,7 +52,9 @@ func main() {
 	accountsCotroller := accounts.NewController(accounts.NewModel(db))
 	r.Mount("/accounts", accountsCotroller)
 
-	log.Print("start listening")
-	err = http.ListenAndServe(":3000", r)
+	listenAddr := fmt.Sprintf(":%d", *port)
+
+	log.Printf("Listening on %s", listenAddr)
+	err = http.ListenAndServe(listenAddr, r)
 	log.Fatal(fmt.Sprintf("listening: %w", err))
 }
