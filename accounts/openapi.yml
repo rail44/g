@@ -153,7 +153,7 @@ components:
       type: object
       properties:
         id:
-          type: string
+          type: integer
       required:
       - id
     Mint:
@@ -162,7 +162,7 @@ components:
         account:
           type: integer
         id:
-          type: string
+          type: integer
         type:
           type: string
           enum: ["mint"]
@@ -183,7 +183,7 @@ components:
         account:
           type: integer
         id:
-          type: string
+          type: integer
         type:
           type: string
           enum: ["spend"]
@@ -204,7 +204,7 @@ components:
         account:
           type: integer
         id:
-          type: string
+          type: integer
         type:
           type: string
           enum: ["transfer"]

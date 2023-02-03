@@ -15,6 +15,7 @@ func mapToSubtype(entity sqlc.GetTransactionsRow) (interface{}, error) {
 		}
 
 		return Mint{
+			Id:         int(entity.TransactionID),
 			Account:    accountId,
 			Amount:     amount,
 			InsertedAt: entity.InsertedAt,
@@ -29,6 +30,7 @@ func mapToSubtype(entity sqlc.GetTransactionsRow) (interface{}, error) {
 		}
 
 		return Spend{
+			Id:         int(entity.TransactionID),
 			Account:    accountId,
 			Amount:     amount,
 			InsertedAt: entity.InsertedAt,
@@ -43,6 +45,7 @@ func mapToSubtype(entity sqlc.GetTransactionsRow) (interface{}, error) {
 		}
 
 		return Transfer{
+			Id:         int(entity.TransactionID),
 			Account:    accountId,
 			Amount:     amount,
 			InsertedAt: entity.InsertedAt,

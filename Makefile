@@ -14,6 +14,8 @@ db/up:
 db/schema db/reset:
 	psql -f sqlc/schema.sql postgresql://$(PG_USER):$(PG_PASS)@$(PG_HOST):$(PG_PORT)/$(PG_DB)
 
+generate: openapi/generate sqlc/generate
+
 openapi/generate: accounts/openapi.gen.go
 accounts/openapi.gen.go: accounts/openapi.yml
 	oapi-codegen -package accounts -generate types,chi-server,strict-server $< > $@

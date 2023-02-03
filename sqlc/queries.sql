@@ -6,6 +6,7 @@ SELECT balance FROM balances WHERE account=$1 LIMIT 1;
 
 -- name: GetTransactions :many
 SELECT
+  transactions.id AS transaction_id,
   transactions.account AS account_id,
   transactions.inserted_at AS inserted_at,
 

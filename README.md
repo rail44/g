@@ -86,46 +86,61 @@ g/
 #### Register
 
 ```bash
-$ curl -v --data '{"name": "hoge"}' http://localhost:3000/accounts
-
-*   Trying 127.0.0.1:3000...
-* Connected to localhost (127.0.0.1) port 3000 (#0)
-> POST /accounts HTTP/1.1
-> Host: localhost:3000
-> User-Agent: curl/7.87.0
-> Accept: */*
-> Content-Length: 16
-> Content-Type: application/x-www-form-urlencoded
-> 
-* Mark bundle as not supporting multiuse
-< HTTP/1.1 200 OK
-< Content-Type: application/json
-< Date: Fri, 03 Feb 2023 08:50:19 GMT
-< Content-Length: 16
-< 
+$ curl --data '{"name": "hoge"}' http://localhost:3000/accounts
 {"accountId":1}
-* Connection #0 to host localhost left intact
+```
+
+#### Register
+
+```bash
+$ curl http://localhost:3000/accounts/1/balance
+{"balance":0}
 ```
 
 #### Mint
 
 ```bash
-$ curl -v --data '{"amount": 100}' http://localhost:3000/accounts/1/mint
-*   Trying 127.0.0.1:3000...
-* Connected to localhost (127.0.0.1) port 3000 (#0)
-> POST /accounts/1/mint HTTP/1.1
-> Host: localhost:3000
-> User-Agent: curl/7.87.0
-> Accept: */*
-> Content-Length: 15
-> Content-Type: application/x-www-form-urlencoded
-> 
-* Mark bundle as not supporting multiuse
-< HTTP/1.1 200 OK
-< Content-Type: application/json
-< Date: Fri, 03 Feb 2023 09:00:05 GMT
-< Content-Length: 20
-< 
+$ curl http://localhost:3000/accounts/1/balance
+{"balance":100}
+$ curl --data '{"amount": 100}' http://localhost:3000/accounts/1/mint
 {"transactionId":1}
-* Connection #0 to host localhost left intact
+$ curl http://localhost:3000/accounts/1/balance
+{"balance":100}
+```
+
+#### Spend
+
+```bash
+$ curl http://localhost:3000/accounts/1/balance
+{"balance":100}
+$ curl --data '{"amount": 50}' http://localhost:3000/accounts/1/spend
+{"transactionId":2}
+$ curl http://localhost:3000/accounts/1/balance
+{"balance":50}
+```
+
+#### Transfer
+
+```bash
+$ curl --data '{"amount": 50}' http://localhost:3000/accounts/1/spend
+{"transactionId":2}
+$ curl http://localhost:3000/accounts/1/balance
+{"balance":50}
+$ curl http://localhost:3000/accounts/2/balance
+{"balance":0}
+
+$ curl --data '{"amount": 20, "recipient": 2}' http://localhost:3000/accounts/1/transfer
+{"transactionId":2}
+$ curl http://localhost:3000/accounts/1/balance
+{"balance":30}
+$ curl http://localhost:3000/accounts/2/balance
+{"balance":20}
+```
+
+
+#### Transactions
+
+```bash
+$ curl http://localhost:3000/accounts/1/transactions
+{"balance":20}
 ```

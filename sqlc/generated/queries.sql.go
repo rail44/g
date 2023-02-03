@@ -54,6 +54,7 @@ func (q *Queries) GetBalance(ctx context.Context, account int64) (string, error)
 
 const getTransactions = `-- name: GetTransactions :many
 SELECT
+  transactions.id AS transaction_id,
   transactions.account AS account_id,
   transactions.inserted_at AS inserted_at,
 
@@ -74,6 +75,7 @@ WHERE transactions.account=$1 OR transfers.recipient=$1 ORDER BY transactions.in
 `
 
 type GetTransactionsRow struct {
+	TransactionID     int64
 	AccountID         int64
 	InsertedAt        time.Time
 	MintID            sql.NullInt64
@@ -95,6 +97,7 @@ func (q *Queries) GetTransactions(ctx context.Context, account int64) ([]GetTran
 	for rows.Next() {
 		var i GetTransactionsRow
 		if err := rows.Scan(
+			&i.TransactionID,
 			&i.AccountID,
 			&i.InsertedAt,
 			&i.MintID,

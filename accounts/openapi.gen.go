@@ -33,7 +33,7 @@ const (
 type Mint struct {
 	Account    int       `json:"account"`
 	Amount     int       `json:"amount"`
-	Id         string    `json:"id"`
+	Id         int       `json:"id"`
 	InsertedAt time.Time `json:"inserted_at"`
 	Type       MintType  `json:"type"`
 }
@@ -45,7 +45,7 @@ type MintType string
 type Spend struct {
 	Account    int       `json:"account"`
 	Amount     int       `json:"amount"`
-	Id         string    `json:"id"`
+	Id         int       `json:"id"`
 	InsertedAt time.Time `json:"inserted_at"`
 	Type       SpendType `json:"type"`
 }
@@ -57,7 +57,7 @@ type SpendType string
 type Transfer struct {
 	Account    int          `json:"account"`
 	Amount     int          `json:"amount"`
-	Id         string       `json:"id"`
+	Id         int          `json:"id"`
 	InsertedAt time.Time    `json:"inserted_at"`
 	Recipient  int          `json:"recipient"`
 	Type       TransferType `json:"type"`

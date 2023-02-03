@@ -205,7 +205,7 @@ func (model *Model) Spend(ctx context.Context, accountId int, amount int) (int, 
 		accountIdInt64 := int64(accountId)
 		txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
 			Account: accountIdInt64,
-			Mint:    sql.NullInt64{Int64: mintId, Valid: true},
+			Spend:   sql.NullInt64{Int64: mintId, Valid: true},
 		})
 		if err != nil {
 			return 0, fmt.Errorf("query InsertTransaction: %w", err)
