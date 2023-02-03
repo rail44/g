@@ -124,11 +124,11 @@ paths:
               properties:
                 amount:
                   type: integer
-                to:
+                recipient:
                   type: integer
               required:
                 - amount
-                - to
+                - recipient
       responses:
         200:
           content:

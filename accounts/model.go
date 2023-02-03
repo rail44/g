@@ -10,6 +10,8 @@ import (
 	"strconv"
 )
 
+var NotFoundError = errors.New("NotFound")
+
 // データを問い合わせて発覚するロジックのエラー
 var DomainError = errors.New("Domain Error")
 
@@ -37,7 +39,7 @@ func WithTransaction[T interface{}](db *sql.DB, f func(tx *sql.Tx) (T, error)) (
 }
 
 // QueryとCommandに分けるのもありかもしれないです
-// (Commandについてははinstantiate毎にトランザクションを発行してしまうと見通しがよくなるかもしれない
+// (Commandについてはinstantiate毎にトランザクションを発行してしまうと見通しがよくなるかもしれない
 type Model struct {
 	db *sql.DB
 }
@@ -46,15 +48,15 @@ func NewModel(db *sql.DB) *Model {
 	return &Model{db: db}
 }
 
-// idのaccountsが存在していなければDomainError
+// idのaccountsが存在していなければNotFound Error
 func (model *Model) Exists(ctx context.Context, id int) error {
 	queries := sqlc.New(model.db)
 
 	_, err := queries.GetAccount(ctx, int64(id))
 
 	if err == sql.ErrNoRows {
-		// DomainErrorをwrapしてearly return
-		return fmt.Errorf("Not found account by id %d: %w", id, DomainError)
+		// NotFoundErrorをwrapしてearly return
+		return fmt.Errorf("Not found account by id %d: %w", id, NotFoundError)
 	}
 
 	if err != nil {
@@ -82,6 +84,11 @@ func (model *Model) HasEnough(ctx context.Context, id int, amount int) error {
 
 func (model *Model) GetBalance(ctx context.Context, id int) (int, error) {
 	queries := sqlc.New(model.db)
+
+	err := model.Exists(ctx, id)
+	if err != nil {
+		return 0, err
+	}
 
 	balanceDecimal, err := queries.GetBalance(ctx, int64(id))
 	if err != nil {
@@ -149,6 +156,12 @@ func (model *Model) Mint(ctx context.Context, accountId int, amount int) (int, e
 
 func (model *Model) GetTransactions(ctx context.Context, accountId int) ([]interface{}, error) {
 	queries := sqlc.New(model.db)
+
+	err := model.Exists(ctx, accountId)
+	if err != nil {
+		return nil, err
+	}
+
 	transactions, err := queries.GetTransactions(ctx, int64(accountId))
 	if err != nil {
 		return nil, fmt.Errorf("query GetTransactions: %w", err)
@@ -210,10 +223,6 @@ func (model *Model) Spend(ctx context.Context, accountId int, amount int) (int, 
 func (model *Model) Transfer(ctx context.Context, senderAccountId int, recipientAccountId int, amount int) (int, error) {
 	return WithTransaction(model.db, func(tx *sql.Tx) (int, error) {
 		queries := sqlc.New(tx)
-
-		if amount <= 0 {
-			return 0, fmt.Errorf("amount should be positive value %d: %w", amount, DomainError)
-		}
 
 		err := model.Exists(ctx, senderAccountId)
 		if err != nil {

@@ -15,11 +15,6 @@ var ServerOptions = StrictHTTPServerOptions{
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	},
 	ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-		if errors.Is(err, NotFoundError) {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-
 		if errors.Is(err, ValidationError) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -45,8 +40,12 @@ type Controller struct {
 	model *Model
 }
 
-// GET /balance
 func (controller Controller) Balance(ctx context.Context, req BalanceRequestObject) (BalanceResponseObject, error) {
+	err := controller.model.Exists(ctx, req.Id)
+	if err != nil {
+		return nil, err
+	}
+
 	balance, err := controller.model.GetBalance(ctx, req.Id)
 	if err != nil {
 		return nil, err
@@ -58,8 +57,12 @@ func (controller Controller) Balance(ctx context.Context, req BalanceRequestObje
 	return res, nil
 }
 
-// GET /transactions
 func (controller Controller) Transactions(ctx context.Context, req TransactionsRequestObject) (TransactionsResponseObject, error) {
+	err := controller.model.Exists(ctx, req.Id)
+	if err != nil {
+		return nil, err
+	}
+
 	transactions, err := controller.model.GetTransactions(ctx, req.Id)
 	if err != nil {
 		return nil, err
@@ -71,7 +74,6 @@ func (controller Controller) Transactions(ctx context.Context, req TransactionsR
 	return res, nil
 }
 
-// POST /
 func (controller Controller) Register(ctx context.Context, req RegisterRequestObject) (RegisterResponseObject, error) {
 	if len(req.Body.Name) == 0 {
 		return nil, fmt.Errorf("name is not presented: %w", ValidationError)
@@ -88,12 +90,7 @@ func (controller Controller) Register(ctx context.Context, req RegisterRequestOb
 	return res, nil
 }
 
-// POST /{id}/mint
 func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (MintResponseObject, error) {
-	if req.Body.Amount <= 0 {
-		return nil, fmt.Errorf("amount should be positive value %d: %w", req.Body.Amount, ValidationError)
-	}
-
 	txId, err := controller.model.Mint(ctx, req.Id, req.Body.Amount)
 	if err != nil {
 		return nil, err
@@ -105,7 +102,6 @@ func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (M
 	return res, nil
 }
 
-// POST /{id}/spend
 func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) (SpendResponseObject, error) {
 	if req.Body.Amount <= 0 {
 		return nil, fmt.Errorf("amount should be positive value %d: %w", req.Body.Amount, ValidationError)
@@ -122,17 +118,12 @@ func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) 
 	return res, nil
 }
 
-// POST /{id}/transfer
 func (controller Controller) Transfer(ctx context.Context, req TransferRequestObject) (TransferResponseObject, error) {
 	if req.Body.Amount <= 0 {
 		return nil, fmt.Errorf("amount should be positive value %d: %w", req.Body.Amount, ValidationError)
 	}
 
-	if req.Body.Recipient <= 0 {
-		return nil, fmt.Errorf("recipient id should be positive value %d: %w", req.Body.Amount, ValidationError)
-	}
-
-	txId, err := controller.model.Transfer(ctx, req.Id, req.Body.Recipient, req.Body.Amount)
+	txId, err := controller.model.Transfer(ctx, req.Id, req.Body.To, req.Body.Amount)
 	if err != nil {
 		return nil, err
 	}

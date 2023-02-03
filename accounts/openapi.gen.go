@@ -86,8 +86,8 @@ type SpendJSONBody struct {
 
 // TransferJSONBody defines parameters for Transfer.
 type TransferJSONBody struct {
-	Amount int `json:"amount"`
-	To     int `json:"to"`
+	Amount    int `json:"amount"`
+	Recipient int `json:"recipient"`
 }
 
 // RegisterJSONRequestBody defines body for Register for application/json ContentType.
