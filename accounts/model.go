@@ -1,11 +1,11 @@
 package accounts
 
 import (
-	"fmt"
-	"strconv"
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/rail44/g/sqlc/generated"
+	"strconv"
 )
 
 type Model struct {
@@ -17,15 +17,15 @@ func (model *Model) Exists(ctx context.Context, id int) (bool, error) {
 
 	_, err := queries.GetAccount(ctx, int64(id))
 
-  if err == sql.ErrNoRows {
-    return false, nil;
-  }
-
-	if err != nil {
-    return false, fmt.Errorf("Exists: %w", err);
+	if err == sql.ErrNoRows {
+		return false, nil
 	}
 
-  return true, nil
+	if err != nil {
+		return false, fmt.Errorf("Exists: %w", err)
+	}
+
+	return true, nil
 }
 
 func (model *Model) GetBalance(ctx context.Context, id int) (int, error) {
@@ -62,11 +62,11 @@ func (model *Model) Register(ctx context.Context, name string) (int, error) {
 	}
 
 	err = tx.Commit()
-  if err != nil {
+	if err != nil {
 		return 0, fmt.Errorf("commit: %w", err)
-  }
+	}
 
-  return int(accountId), nil
+	return int(accountId), nil
 }
 
 func (model *Model) Mint(ctx context.Context, accountId int, amount int) (int, error) {
@@ -78,12 +78,12 @@ func (model *Model) Mint(ctx context.Context, accountId int, amount int) (int, e
 	queries := sqlc.New(tx)
 
 	amountDecimal := strconv.Itoa(amount)
-  mintId, err := queries.InsertMint(ctx, amountDecimal)
+	mintId, err := queries.InsertMint(ctx, amountDecimal)
 	if err != nil {
 		return 0, fmt.Errorf("query InsertMint: %w", err)
 	}
 
-  accountIdInt64 := int64(accountId)
+	accountIdInt64 := int64(accountId)
 	txId, err := queries.InsertTransaction(ctx, sqlc.InsertTransactionParams{
 		Account: accountIdInt64,
 		Mint:    sql.NullInt64{Int64: mintId, Valid: true},
@@ -101,9 +101,63 @@ func (model *Model) Mint(ctx context.Context, accountId int, amount int) (int, e
 	}
 
 	err = tx.Commit()
-  if err != nil {
+	if err != nil {
 		return 0, fmt.Errorf("commit: %w", err)
-  }
+	}
 
-  return int(txId), nil
+	return int(txId), nil
+}
+
+func mapToSubtype(tx sqlc.GetTransactionsRow) (interface{}, error) {
+	if tx.MintID.Valid {
+		amount, err := strconv.Atoi(tx.MintAmount.String)
+		if err != nil {
+			return nil, fmt.Errorf("parse amount as decimal: %w", err)
+		}
+
+		_type := MintTypeMint
+		return Mint{Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type}, nil
+	}
+
+	if tx.SpendID.Valid {
+		amount, err := strconv.Atoi(tx.SpendAmount.String)
+		if err != nil {
+			return nil, fmt.Errorf("parse amount as decimal: %w", err)
+		}
+
+		_type := SpendTypeSpend
+		return Spend{Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type}, nil
+	}
+
+	if tx.TransferID.Valid {
+		amount, err := strconv.Atoi(tx.TransferAmount.String)
+		if err != nil {
+			return nil, fmt.Errorf("parse amount as decimal: %w", err)
+		}
+
+		_type := TransferTypeTransfer
+		recipient := int(tx.TransferRecipient.Int64)
+		return Transfer{Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type, Recipient: &recipient}, nil
+	}
+	return nil, fmt.Errorf("failed to determine tx type")
+}
+
+func (model *Model) GetTransactions(ctx context.Context, accountId int) ([]interface{}, error) {
+	queries := sqlc.New(model.db)
+	transactions, err := queries.GetTransactions(ctx, int64(accountId))
+	if err != nil {
+		return nil, fmt.Errorf("query GetTransactions: %w", err)
+	}
+
+	var result []interface{}
+	for _, v := range transactions {
+		row, err := mapToSubtype(v)
+		if err != nil {
+			return nil, fmt.Errorf("mapToSubtype: %w", err)
+		}
+
+		result = append(result, row)
+	}
+
+	return result, nil
 }

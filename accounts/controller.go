@@ -6,31 +6,33 @@ import (
 	"net/http"
 	"strconv"
 
-	// "flag"
 	"database/sql"
-
-	_ "github.com/lib/pq"
 	"github.com/rail44/g/sqlc/generated"
 )
 
 func NewController(db *sql.DB) http.Handler {
-  model := Model { db: db }
-  controller := Controller { db: db, model: &model }
+	model := Model{db: db}
+	controller := Controller{db: db, model: &model}
 	return Handler(NewStrictHandler(controller, nil))
 }
 
 type Controller struct {
-	db *sql.DB
+	db    *sql.DB
 	model *Model
 }
 
 func (controller Controller) Balance(ctx context.Context, req BalanceRequestObject) (BalanceResponseObject, error) {
-  balance, err := controller.model.GetBalance(ctx, req.Id)
+	exists, err := controller.model.Exists(ctx, req.Id)
+	if err != nil {
+		return nil, err
+	}
 
-  if err == sql.ErrNoRows {
+	if !exists {
 		var res Balance404Response
-    return res, nil
-  }
+		return res, nil
+	}
+
+	balance, err := controller.model.GetBalance(ctx, req.Id)
 
 	if err != nil {
 		return nil, fmt.Errorf("GetBalance: %w", err)
@@ -43,65 +45,26 @@ func (controller Controller) Balance(ctx context.Context, req BalanceRequestObje
 }
 
 func (controller Controller) Transactions(ctx context.Context, req TransactionsRequestObject) (TransactionsResponseObject, error) {
-  exists, err :=  controller.model.Exists(ctx, req.Id)
-  if err != nil {
+	exists, err := controller.model.Exists(ctx, req.Id)
+	if err != nil {
 		return nil, err
 	}
 
-  if !exists {
-    var res Transactions404Response
-    return res, nil
-  }
+	if !exists {
+		var res Transactions404Response
+		return res, nil
+	}
 
-	queries := sqlc.New(controller.db)
-	transactions, err := queries.GetTransactions(ctx, int64(req.Id))
+	transactions, err := controller.model.GetTransactions(ctx, req.Id)
+
 	if err != nil {
-		return nil, fmt.Errorf("query GetTransactions: %w", err)
+		return nil, fmt.Errorf("GetBalance: %w", err)
 	}
 
-	var res []interface{}
-	for i := range transactions {
-		tx := transactions[i]
-		if tx.MintID.Valid {
-			amount, err := strconv.Atoi(tx.MintAmount.String)
-			if err != nil {
-				return nil, fmt.Errorf("parse amount as decimal: %w", err)
-			}
-
-			_type := MintTypeMint
-			mint := Mint{Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type}
-			res = append(res, mint)
-			continue
-		}
-
-		if tx.SpendID.Valid {
-			amount, err := strconv.Atoi(tx.SpendAmount.String)
-			if err != nil {
-				return nil, fmt.Errorf("parse amount as decimal: %w", err)
-			}
-
-			_type := SpendTypeSpend
-			spend := Spend{Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type}
-			res = append(res, spend)
-			continue
-		}
-
-		if tx.TransferID.Valid {
-			amount, err := strconv.Atoi(tx.TransferAmount.String)
-			if err != nil {
-				return nil, fmt.Errorf("parse amount as decimal: %w", err)
-			}
-
-			_type := TransferTypeTransfer
-			recipient := int(tx.TransferRecipient.Int64)
-			transfer := Transfer{Amount: &amount, InsertedAt: &tx.InsertedAt, Type: &_type, Recipient: &recipient}
-			res = append(res, transfer)
-			continue
-		}
-		return nil, fmt.Errorf("failed to determine type of transaction")
-	}
-
-	return Transactions200JSONResponse(res), nil
+	res := Transactions200JSONResponse(
+		transactions,
+	)
+	return res, nil
 }
 
 func (controller Controller) Register(ctx context.Context, req RegisterRequestObject) (RegisterResponseObject, error) {
@@ -123,21 +86,21 @@ func (controller Controller) Register(ctx context.Context, req RegisterRequestOb
 }
 
 func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (MintResponseObject, error) {
-  exists, err :=  controller.model.Exists(ctx, req.Id)
-  if err != nil {
+	exists, err := controller.model.Exists(ctx, req.Id)
+	if err != nil {
 		return nil, err
 	}
 
-  if !exists {
-    var res Mint404Response
-    return res, nil
-  }
-
-  txId, err := controller.model.Mint(ctx, req.Id, req.Body.Amount)
-  if err == sql.ErrNoRows {
+	if !exists {
 		var res Mint404Response
-    return res, nil
-  }
+		return res, nil
+	}
+
+	txId, err := controller.model.Mint(ctx, req.Id, req.Body.Amount)
+	if err == sql.ErrNoRows {
+		var res Mint404Response
+		return res, nil
+	}
 
 	txIdInt := int(txId)
 	res := Mint200JSONResponse{
@@ -148,15 +111,15 @@ func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (M
 }
 
 func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) (SpendResponseObject, error) {
-  exists, err :=  controller.model.Exists(ctx, req.Id)
-  if err != nil {
+	exists, err := controller.model.Exists(ctx, req.Id)
+	if err != nil {
 		return nil, err
 	}
 
-  if !exists {
-    var res Spend404Response
-    return res, nil
-  }
+	if !exists {
+		var res Spend404Response
+		return res, nil
+	}
 
 	tx, err := controller.db.Begin()
 	if err != nil {
@@ -174,7 +137,7 @@ func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) 
 
 	balance, err := controller.model.GetBalance(ctx, req.Id)
 	if err == sql.ErrNoRows {
-    var res Spend404Response;
+		var res Spend404Response
 		return res, nil
 	}
 
@@ -219,22 +182,22 @@ func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) 
 }
 
 func (controller Controller) Transfer(ctx context.Context, req TransferRequestObject) (TransferResponseObject, error) {
-  exists, err :=  controller.model.Exists(ctx, req.Id)
-  if err != nil {
+	exists, err := controller.model.Exists(ctx, req.Id)
+	if err != nil {
 		return nil, err
 	}
 
-  if !exists {
-    var res Transfer404Response
-    return res, nil
-  }
+	if !exists {
+		var res Transfer404Response
+		return res, nil
+	}
 
-  exists, err =  controller.model.Exists(ctx, req.Body.To)
-  if err != nil {
+	exists, err = controller.model.Exists(ctx, req.Body.To)
+	if err != nil {
 		return nil, err
 	}
 
-  if !exists {
+	if !exists {
 		msg := fmt.Sprintf("recipient was not found by id %d", req.Body.To)
 		res := Transfer400TextResponse(msg)
 		return res, nil
@@ -257,7 +220,7 @@ func (controller Controller) Transfer(ctx context.Context, req TransferRequestOb
 	accountId := int64(req.Id)
 	balance, err := controller.model.GetBalance(ctx, req.Id)
 	if err == sql.ErrNoRows {
-    var res Transfer404Response
+		var res Transfer404Response
 		return res, nil
 	}
 

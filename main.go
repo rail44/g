@@ -1,13 +1,14 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 
-	"database/sql"
-
 	"github.com/go-chi/chi/v5"
+	_ "github.com/lib/pq"
+
 	"github.com/rail44/g/accounts"
 )
 
