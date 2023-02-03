@@ -31,6 +31,20 @@ func (model *Model) Exists(ctx context.Context, id int) error {
 	return nil
 }
 
+func (model *Model) HasEnough(ctx context.Context, id int, amount int) error {
+	balance, err := model.GetBalance(ctx, id)
+
+	if err != nil {
+		return err
+	}
+
+	if amount > balance {
+		return fmt.Errorf("%d amount was requested, but balance was only %d", amount, balance)
+	}
+
+	return nil
+}
+
 func (model *Model) GetBalance(ctx context.Context, id int) (int, error) {
 	queries := sqlc.New(model.db)
 
@@ -83,6 +97,11 @@ func (model *Model) Mint(ctx context.Context, accountId int, amount int) (int, e
 	}
 	defer tx.Rollback()
 	queries := sqlc.New(tx)
+
+	err = model.Exists(ctx, accountId)
+	if err != nil {
+		return 0, err
+	}
 
 	amountDecimal := strconv.Itoa(amount)
 	mintId, err := queries.InsertMint(ctx, amountDecimal)
@@ -142,6 +161,16 @@ func (model *Model) Spend(ctx context.Context, accountId int, amount int) (int, 
 	}
 	defer tx.Rollback()
 	queries := sqlc.New(tx)
+
+	err = model.Exists(ctx, accountId)
+	if err != nil {
+		return 0, err
+	}
+
+	err = model.HasEnough(ctx, accountId, amount)
+	if err != nil {
+		return 0, err
+  }
 
 	amountDecimal := strconv.Itoa(amount)
 	mintId, err := queries.InsertMint(ctx, amountDecimal)

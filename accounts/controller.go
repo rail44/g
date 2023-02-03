@@ -88,11 +88,6 @@ func (controller Controller) Register(ctx context.Context, req RegisterRequestOb
 }
 
 func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (MintResponseObject, error) {
-	err := controller.model.Exists(ctx, req.Id)
-	if err != nil {
-		return nil, err
-	}
-
 	txId, err := controller.model.Mint(ctx, req.Id, req.Body.Amount)
 	if err != nil {
 		return nil, err
@@ -107,27 +102,11 @@ func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (M
 }
 
 func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) (SpendResponseObject, error) {
-	err := controller.model.Exists(ctx, req.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	balance, err := controller.model.GetBalance(ctx, req.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	if req.Body.Amount > balance {
-		msg := fmt.Sprintf("tried to spend %d, but balance was only %d", req.Body.Amount, balance)
-		res := Spend400TextResponse(msg)
-		return res, nil
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("query DecrementBalance: %w", err)
-	}
-
   txId, err := controller.model.Spend(ctx, req.Id, req.Body.Amount)
+	if err != nil {
+		return nil, err
+	}
+
 	res := Spend200JSONResponse{
 		TransactionId: &txId,
 	}
