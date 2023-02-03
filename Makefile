@@ -9,7 +9,7 @@ g/run:
 	@go run . -port=$(PORT) -dbuser=$(PG_USER) -dbpass=$(PG_PASS) -dbhost=$(PG_HOST) -dbport=$(PG_PORT) -dbname=$(PG_DB)
 
 db/up:
-	docker run --rm -p $(PG_PORT):$(PG_PORT) -e PG_PASS=$(PG_PASS) -e POSTGRES_DB=$(PG_DB) -d postgres
+	docker run -ti --rm -p $(PG_PORT):$(PG_PORT) -e POSTGRES_USER=$(PG_USER) -e POSTGRES_PASSWORD=$(PG_PASS) -e POSTGRES_DB=$(PG_DB) postgres
 
 db/schema db/reset:
 	psql -f sqlc/schema.sql postgresql://$(PG_USER):$(PG_PASS)@$(PG_HOST):$(PG_PORT)/$(PG_DB)
