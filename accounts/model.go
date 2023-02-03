@@ -6,26 +6,29 @@ import (
 	"fmt"
 	"github.com/rail44/g/sqlc/generated"
 	"strconv"
+	"errors"
 )
+
+var ValidationError = errors.New("Validation Error");
 
 type Model struct {
 	db *sql.DB
 }
 
-func (model *Model) Exists(ctx context.Context, id int) (bool, error) {
+func (model *Model) Exists(ctx context.Context, id int) error {
 	queries := sqlc.New(model.db)
 
 	_, err := queries.GetAccount(ctx, int64(id))
 
 	if err == sql.ErrNoRows {
-		return false, nil
+		return fmt.Errorf("Not found account by id %d: %w", id, ValidationError)
 	}
 
 	if err != nil {
-		return false, fmt.Errorf("Exists: %w", err)
+		return fmt.Errorf("Exists: %w", err)
 	}
 
-	return true, nil
+	return nil
 }
 
 func (model *Model) GetBalance(ctx context.Context, id int) (int, error) {
@@ -44,6 +47,10 @@ func (model *Model) GetBalance(ctx context.Context, id int) (int, error) {
 }
 
 func (model *Model) Register(ctx context.Context, name string) (int, error) {
+	if len(name) == 0 {
+    return 0, fmt.Errorf("name is not presented: %w", ValidationError)
+	}
+
 	tx, err := model.db.Begin()
 	if err != nil {
 		return 0, fmt.Errorf("begin transaction: %w", err)

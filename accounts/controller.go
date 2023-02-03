@@ -2,18 +2,36 @@ package accounts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"database/sql"
+
 	"github.com/rail44/g/sqlc/generated"
 )
 
 func NewController(db *sql.DB) http.Handler {
 	model := Model{db: db}
-	controller := Controller{db: db, model: &model}
-	return Handler(NewStrictHandler(controller, nil))
+  controller := Controller{ db: db, model: &model }
+
+  options := StrictHTTPServerOptions {
+		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		},
+		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+      if errors.Is(err, ValidationError) {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+      }
+
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		},
+	}
+
+	return HandlerWithOptions(NewStrictHandlerWithOptions(controller, nil, options), ChiServerOptions{
+  })
 }
 
 type Controller struct {
@@ -22,14 +40,9 @@ type Controller struct {
 }
 
 func (controller Controller) Balance(ctx context.Context, req BalanceRequestObject) (BalanceResponseObject, error) {
-	exists, err := controller.model.Exists(ctx, req.Id)
+	err := controller.model.Exists(ctx, req.Id)
 	if err != nil {
 		return nil, err
-	}
-
-	if !exists {
-		var res Balance404Response
-		return res, nil
 	}
 
 	balance, err := controller.model.GetBalance(ctx, req.Id)
@@ -45,14 +58,9 @@ func (controller Controller) Balance(ctx context.Context, req BalanceRequestObje
 }
 
 func (controller Controller) Transactions(ctx context.Context, req TransactionsRequestObject) (TransactionsResponseObject, error) {
-	exists, err := controller.model.Exists(ctx, req.Id)
+	err := controller.model.Exists(ctx, req.Id)
 	if err != nil {
 		return nil, err
-	}
-
-	if !exists {
-		var res Transactions404Response
-		return res, nil
 	}
 
 	transactions, err := controller.model.GetTransactions(ctx, req.Id)
@@ -68,13 +76,7 @@ func (controller Controller) Transactions(ctx context.Context, req TransactionsR
 }
 
 func (controller Controller) Register(ctx context.Context, req RegisterRequestObject) (RegisterResponseObject, error) {
-	name := req.Body.Name
-	if len(name) == 0 {
-		res := Register400TextResponse("name is not presented")
-		return res, nil
-	}
-
-	id, err := controller.model.Register(ctx, name)
+	id, err := controller.model.Register(ctx, req.Body.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -86,14 +88,9 @@ func (controller Controller) Register(ctx context.Context, req RegisterRequestOb
 }
 
 func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (MintResponseObject, error) {
-	exists, err := controller.model.Exists(ctx, req.Id)
+	err := controller.model.Exists(ctx, req.Id)
 	if err != nil {
 		return nil, err
-	}
-
-	if !exists {
-		var res Mint404Response
-		return res, nil
 	}
 
 	txId, err := controller.model.Mint(ctx, req.Id, req.Body.Amount)
@@ -110,14 +107,9 @@ func (controller Controller) Mint(ctx context.Context, req MintRequestObject) (M
 }
 
 func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) (SpendResponseObject, error) {
-	exists, err := controller.model.Exists(ctx, req.Id)
+	err := controller.model.Exists(ctx, req.Id)
 	if err != nil {
 		return nil, err
-	}
-
-	if !exists {
-		var res Spend404Response
-		return res, nil
 	}
 
 	balance, err := controller.model.GetBalance(ctx, req.Id)
@@ -144,25 +136,14 @@ func (controller Controller) Spend(ctx context.Context, req SpendRequestObject) 
 }
 
 func (controller Controller) Transfer(ctx context.Context, req TransferRequestObject) (TransferResponseObject, error) {
-	exists, err := controller.model.Exists(ctx, req.Id)
+	err := controller.model.Exists(ctx, req.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	if !exists {
-		var res Transfer404Response
-		return res, nil
-	}
-
-	exists, err = controller.model.Exists(ctx, req.Body.To)
+	err = controller.model.Exists(ctx, req.Body.To)
 	if err != nil {
 		return nil, err
-	}
-
-	if !exists {
-		msg := fmt.Sprintf("recipient was not found by id %d", req.Body.To)
-		res := Transfer400TextResponse(msg)
-		return res, nil
 	}
 
 	tx, err := controller.db.Begin()
