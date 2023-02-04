@@ -18,7 +18,7 @@
 PostgreSQLをDockerで動かす場合は、リポジトリをクローンして特に変更なしに動作させることができるようになっているはずです。
 
 ```bash
-$ make db/run
+$ make db/up
 
 ...
 ```
